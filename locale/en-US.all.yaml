@@ -1,0 +1,11 @@
+- id: errcode_1001
+  translation: Parameter exception
+  
+- id: errcode_1002
+  translation: http request result error
+
+- id: errcode_9000
+  translation: Request authorization timeout
+
+- id: errcode_9001
+  translation: Request authorization illegal

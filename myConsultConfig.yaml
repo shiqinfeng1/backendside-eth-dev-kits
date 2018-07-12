@@ -1,15 +1,13 @@
-useViper: false
+useViper: true
 httpSrvPort: 8080
-hobbies:
-- skateboarding
-- snowboarding
-- go
 mysql:
   URL: root:11111111@tcp(localhost:3306)
   dbName: myconsult
   idle: 256
   maxOpen: 1024
   debug: true
-LogMode: 35
-eyes : brown
-beard: true
+chunyu: 
+  partner: lianchuangzhongyi
+  partner_key: lY0Qk1Rosy6KuX87
+  debug: false
+  domain: http://test.chunyu.me     #http://test.chunyu.me https://www.chunyuyisheng.com

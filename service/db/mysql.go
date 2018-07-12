@@ -26,10 +26,6 @@ func InitMysql() {
 	if err != nil {
 		panic(err)
 	}
-	err = db.Ping()
-	if !checkErr(err) {
-		return
-	}
 	// Then you could invoke `*sql.DB`'s functions with it
 	idb.DB().SetMaxIdleConns(cmn.Config().GetInt("mysql.idle"))
 	idb.DB().SetMaxOpenConns(cmn.Config().GetInt("mysql.maxOpen"))

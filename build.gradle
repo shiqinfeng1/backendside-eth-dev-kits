@@ -3,27 +3,32 @@ plugins {
 }
 
 golang {
-    packagePath = 'github.com/shiqinfeng1/chunhyuyisheng' //github上的项目路径
+    packagePath = 'github.com/shiqinfeng1/chunyuyisheng' //github上的项目路径
 }
 //构建
 build {
-   //resolveBuildDependencies.enabled = false  //构建时不再进行依赖检查
-   //installDependencies.enabled = false   //构建时不再进行依赖检查
+    resolveBuildDependencies.enabled = false  //构建时不再进行依赖检查
+    installDependencies.enabled = false   //构建时不再进行依赖检查
     // 交叉编译的输出选项，注意，要求go 1.5+
-    targetPlatform = ['darwin-amd64', 'linux-amd64', 'linux-386'] //'windows-amd64',
+    targetPlatform = ['linux-amd64','darwin-amd64'] //'windows-amd64',,  'linux-386'
     
     // 输出文件的路径，可以是绝对路径（相对于项目目录）或者相对路径
     // 其中的${}占位符会在交叉编译时被渲染
-    outputLocation = './.gogradle/${GOOS}_${GOARCH}_myconsult${GOEXE}' //${PROJECT_NAME}
+    //outputLocation = './.gogradle/${GOOS}_${GOARCH}_${PROJECT_NAME}${GOEXE}' //
+    go 'build -o ./build/bin/${GOOS}_${GOARCH}_myconsult${GOEXE} github.com/shiqinfeng1/chunyuyisheng/cmd'
 }
 
 
 dependencies {
     golang {
+        build(['name':'github.com/go-playground/validator'])
         build(['name':'github.com/jinzhu/gorm'])
         build(['name':'github.com/labstack/echo'])
-        build(['name':'github.com/shiqinfeng1/chunyuyisheng'])
+        build(['name':'github.com/mitchellh/go-homedir'])
+        build(['name':'github.com/nicksnyder/go-i18n'])
+        build(['name':'github.com/parnurzeal/gorequest'])
         build(['name':'github.com/spf13/cobra'])
         build(['name':'github.com/spf13/viper'])
+        build(['name':'golang.org/x/net'])
     }
 }

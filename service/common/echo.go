@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-playground/validator"
 	"github.com/labstack/echo"
 	emw "github.com/labstack/echo/middleware"
 )
@@ -66,10 +67,11 @@ func GetAcceptLanguage(c echo.Context) string {
 
 func echoInit(e *echo.Echo) {
 	e.HTTPErrorHandler = EchoHTTPErrorHandler(e)
+	e.Validator = &SimpleValidator{Validator: validator.New()}
 }
 
 func InitHttpService() (e *echo.Echo) {
-	e := echo.New()
+	e = echo.New()
 	echoInit(e)
 	e.Use(emw.CORSWithConfig(emw.CORSConfig{
 		AllowOrigins: []string{"*"},
@@ -78,9 +80,9 @@ func InitHttpService() (e *echo.Echo) {
 	}))
 	return e
 }
-func runHttpService(e *echo.Echo) {
+func RunHttpService(e *echo.Echo) {
 
-	srvAddr := ":" + Config().GetInt("httpSrvPort")
+	srvAddr := ":" + Config().GetString("httpSrvPort")
 
 	log.Printf("Listening and serving HTTP on %s\n", srvAddr)
 	// Start server

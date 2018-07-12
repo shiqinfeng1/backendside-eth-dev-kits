@@ -2,11 +2,9 @@ package guoyi
 
 import (
 	"errors"
-
-	"github.com/labstack/echo"
 )
 
-func GetClinicDoctors(c echo.Context) error {
+func GetClinicDoctors() error {
 
 	return errors.New("to be continue...")
 }

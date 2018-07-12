@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fsnotify/fsnotify"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
@@ -25,14 +27,34 @@ func InitConfig(cfgFile string) {
 		}
 
 		// Search config in home directory with name ".cobra" (without extension).
+		cfgData.AddConfigPath(".")
 		cfgData.AddConfigPath(home)
-		cfgData.SetConfigName("myConsultConfig.yaml")
+		cfgData.SetConfigName("myConsultConfig")
 	}
 	cfgData.AutomaticEnv()
 	if err := cfgData.ReadInConfig(); err != nil {
 		fmt.Println("Can't read config:", err)
 		os.Exit(1)
 	}
+	fmt.Printf("\n********config data********\n")
+	for k, v := range cfgData.AllSettings() {
+		if he, ok := v.(map[string]interface{}); ok {
+			fmt.Printf("%s:\n", k)
+			for k2, v2 := range he {
+				fmt.Printf("  %-18s: %v\n", k2, v2)
+			}
+		} else {
+			fmt.Printf("%-18s: %v\n", k, v)
+		}
+	}
+	fmt.Printf("********config data********\n\n")
+	cfgData.WatchConfig()
+	cfgData.OnConfigChange(func(e fsnotify.Event) {
+		fmt.Println("Config file changed:", e.Name)
+		if err := cfgData.ReadInConfig(); err != nil {
+			fmt.Println("Can't read config:", err)
+		}
+	})
 	/*
 		get method:
 		Get(key string) : interface{}
@@ -50,6 +72,6 @@ func InitConfig(cfgFile string) {
 
 }
 
-func Config() {
+func Config() *viper.Viper {
 	return cfgData
 }
