@@ -1,13 +1,19 @@
 useViper: true
 httpSrvPort: 8080
+debugLevel: debug  #DEBUG INFO WARN ERROR OFF
 mysql:
   URL: root:11111111@tcp(localhost:3306)
   dbName: myconsult
   idle: 256
   maxOpen: 1024
   debug: true
-chunyu: 
+chunyu:
   partner: lianchuangzhongyi
-  partner_key: lY0Qk1Rosy6KuX87
-  debug: false
+  partnerKey: lY0Qk1Rosy6KuX87
   domain: http://test.chunyu.me     #http://test.chunyu.me https://www.chunyuyisheng.com
+  debug: false
+nsq:
+  nodeAddress: 127.0.0.1:4151
+  maxInFlight: 100
+  lookupsAddress: 127.0.0.1:4161
+  debug: true

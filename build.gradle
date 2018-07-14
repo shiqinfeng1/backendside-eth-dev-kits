@@ -7,8 +7,8 @@ golang {
 }
 //构建
 build {
-    resolveBuildDependencies.enabled = false  //构建时不再进行依赖检查
-    installDependencies.enabled = false   //构建时不再进行依赖检查
+    //resolveBuildDependencies.enabled = false  //构建时不再进行依赖检查
+    //installDependencies.enabled = false   //构建时不再进行依赖检查
     // 交叉编译的输出选项，注意，要求go 1.5+
     targetPlatform = ['linux-amd64','darwin-amd64'] //'windows-amd64',,  'linux-386'
     
@@ -18,17 +18,19 @@ build {
     go 'build -o ./build/bin/${GOOS}_${GOARCH}_myconsult${GOEXE} github.com/shiqinfeng1/chunyuyisheng/cmd'
 }
 
-
 dependencies {
     golang {
-        build(['name':'github.com/go-playground/validator'])
+        build(['name':'github.com/fsnotify/fsnotify'])
         build(['name':'github.com/jinzhu/gorm'])
         build(['name':'github.com/labstack/echo'])
+        build(['name':'github.com/labstack/gommon'])
         build(['name':'github.com/mitchellh/go-homedir'])
         build(['name':'github.com/nicksnyder/go-i18n'])
-        build(['name':'github.com/parnurzeal/gorequest'])
+        build(['name':'github.com/nsqio/go-nsq'])
+        build(['name':'github.com/shiqinfeng1/gorequest'])
         build(['name':'github.com/spf13/cobra'])
         build(['name':'github.com/spf13/viper'])
         build(['name':'golang.org/x/net'])
+        build(['name':'gopkg.in/go-playground/validator.v9'])
     }
 }

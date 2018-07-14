@@ -6,4 +6,5 @@ import (
 
 func AddCommands(root *cobra.Command) {
 	root.AddCommand(diagCmd)
+	root.AddCommand(umengPusherCmd)
 }

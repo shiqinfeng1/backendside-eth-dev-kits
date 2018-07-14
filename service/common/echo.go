@@ -10,9 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-playground/validator"
+	//"github.com/go-playground/validator"
 	"github.com/labstack/echo"
 	emw "github.com/labstack/echo/middleware"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 // EchoHTTPErrorHandler is a HTTP error handler. It sends a JSON response
@@ -66,6 +67,12 @@ func GetAcceptLanguage(c echo.Context) string {
 }
 
 func echoInit(e *echo.Echo) {
+	if Config().GetString("debugLevel") == "disable" {
+		e.Debug = false
+	} else {
+		e.Debug = true
+	}
+	LoggerInit(e, Config().GetString("debugLevel"))
 	e.HTTPErrorHandler = EchoHTTPErrorHandler(e)
 	e.Validator = &SimpleValidator{Validator: validator.New()}
 }
