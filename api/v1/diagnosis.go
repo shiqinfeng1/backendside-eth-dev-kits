@@ -197,3 +197,47 @@ func OrientedProblemCreate(c echo.Context) error {
 
 	return nil
 }
+
+//定向问题的付费退款,注意:用户主动发起付费问题退款，退款只能在医生未回答的情况下才能成功。
+func OrientedProblemRefund(c echo.Context) error {
+	return PaidProblemRefund(c)
+}
+
+//获取指定科室和指定城市的医生列表
+func GetEmergencyGraph(c echo.Context) error {
+	p := common.EmergencyGraphPayload{}
+	if err := c.Bind(&p); err != nil {
+		return err
+	}
+	if err := c.Echo().Validator.Validate(p); err != nil {
+		return err
+	}
+	doctorlist, err := chunyu.GetClinicDoctors(p)
+	if err != nil {
+		return common.BizError1002
+	}
+	//to be continue...
+	guoyi.GetClinicDoctors()
+
+	return common.JSONReturns(c, doctorlist)
+}
+
+//众包问题创建
+func EmergencyGraphCreate(c echo.Context) error {
+	p := common.EmergencyGraphPayload{}
+	if err := c.Bind(&p); err != nil {
+		return err
+	}
+	if err := c.Echo().Validator.Validate(p); err != nil {
+		return err
+	}
+	if p.Platform == "chunyu" {
+		problemid, err := chunyu.EmergencyGraphCreate(p)
+		if err != nil {
+			return common.BizError1002
+		}
+		return common.JSONReturns(c, problemid)
+	}
+
+	return nil
+}

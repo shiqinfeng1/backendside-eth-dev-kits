@@ -125,7 +125,6 @@ func PaidProblemRefund(payload cmn.PaidProblemRefundPayload) (*ErrorMsgReponse, 
 	now := time.Now().Unix()
 
 	reqArgs := PaidProblemRefundRequest{
-
 		ProblemId: payload.ProblemId,
 		Partner:   cmn.Config().GetString("chunyu.partner"),
 		Sign:      getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(now, 10), payload.UserId),
@@ -233,7 +232,6 @@ func OrientedProblemCreate(payload cmn.OrientedProblemPayload) (*ProblemAndDocto
 	now := time.Now().Unix()
 
 	reqArgs := OrientedProblemCreateRequest{
-
 		DoctorIds:      payload.DoctorIds,
 		Partner:        cmn.Config().GetString("chunyu.partner"),
 		Sign:           getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(now, 10), payload.UserId),
@@ -256,4 +254,61 @@ func OrientedProblemCreate(payload cmn.OrientedProblemPayload) (*ProblemAndDocto
 		return nil, err
 	}
 	return &Problemlist, nil
+}
+
+//获取急诊图文信息
+func GetEmergencyGraph(payload cmn.EmergencyGraphPayload) (*EmergencyGraphReponse, error) {
+	now := time.Now().Unix()
+
+	reqArgs := EmergencyGraphRequest{
+		Partner: cmn.Config().GetString("chunyu.partner"),
+		Sign:    getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(now, 10), payload.UserId),
+		UserId:  payload.UserId,
+		Atime:   now,
+		Content: payload.Content,
+	}
+
+	var clinicList EmergencyGraphReponse
+	request := gorequest.New()
+	request.SetDebug(cmn.Config().GetBool("chunyu.debug"))
+	request.SetLogger(cmn.Logger)
+	_, _, errs := request.Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/server/problem/get_emergency_graph_info").
+		Send(reqArgs).
+		EndStruct(&clinicList)
+	if errs != nil {
+		err := fmt.Errorf("chunyu.GetEmergencyGraph error: %q", errs)
+		return nil, err
+	}
+	return &clinicList, nil
+}
+
+//创建急诊图文问题
+func EmergencyGraphCreate(payload cmn.EmergencyGraphCreatePayload) (*ProblemIDReponse, error) {
+	now := time.Now().Unix()
+
+	reqArgs := EmergencyGraphCreateRequest{
+		FreeProblemCreateRequest{
+			ClinicNo: payload.ClinicNo,
+			Partner:  cmn.Config().GetString("chunyu.partner"),
+			Sign:     getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(now, 10), payload.UserId),
+			UserId:   payload.UserId,
+			Atime:    now,
+			Content:  payload.Content,
+		},
+		payload.PartnerOrderId,
+		payload.Price,
+	}
+
+	var Problemid ProblemIDReponse
+	request := gorequest.New()
+	request.SetDebug(cmn.Config().GetBool("chunyu.debug"))
+	request.SetLogger(cmn.Logger)
+	_, _, errs := request.Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/problem/create_emergency_graph").
+		Send(reqArgs).
+		EndStruct(&Problemid)
+	if errs != nil {
+		err := fmt.Errorf("chunyu.EmergencyGraphCreate error: %q", errs)
+		return nil, err
+	}
+	return &Problemid, nil
 }

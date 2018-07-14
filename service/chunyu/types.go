@@ -33,6 +33,11 @@ type PaidProblemCreateRequest struct {
 	PartnerOrderId string `json:"partner_order_id"` //唯一标识本次支付行为
 	PayType        string `json:"pay_type"`         //付费方式 二甲医生：qc_hospital_common 三甲医生：qc_hospital_upgrade
 }
+type EmergencyGraphCreateRequest struct {
+	FreeProblemCreateRequest
+	PartnerOrderId string `json:"partner_order_id"` //唯一标识本次支付行为
+	Price          int    `json:"price"`            //价格必须与实时查询到的价格一致
+}
 type OrientedProblemCreateRequest struct {
 	//科室编号,一次查询只能提交一个科室的对应编号  not nil
 	DoctorIds      string `json:"doctor_ids"`       //购买的医生列表 使用#进行连接多个医生，不能有空格
@@ -81,7 +86,14 @@ type RecommendedDoctorRequest struct {
 	UserId  string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
 	Atime   int64  `json:"atime"`   //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 }
-
+type EmergencyGraphRequest struct {
+	//科室编号,一次查询只能提交一个科室的对应编号  not nil
+	Partner string `json:"partner"` //合作方标识 len<32	not nil
+	Sign    string `json:"sign"`    //签名 <32	not nil
+	UserId  string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
+	Atime   int64  `json:"atime"`   //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
+	Content string `json:"content"` //提问的内容
+}
 type DoctorInfo struct {
 	ClinicName     string `json:"clinic_name"`      //科室名称 not nil
 	GoodAt         string `json:"good_at"`          //擅长 not nil
@@ -94,6 +106,14 @@ type DoctorInfo struct {
 	Title          string `json:"title"`            //职称 not nil
 	IsFamousDoctor bool   `json:"is_famous_doctor"` //是否是名医咨询 是	名医咨询10次交互/48h后问题关闭；普通定向问题50次交互/48h后问题关闭
 }
+type ClinicInfo struct {
+	ClinicName string `json:"clinic_name"`   //科室名称 not nil
+	ClinicNo   string `json:"clinic_no"`     //'1':妇科, '15':眼科, '21':产科, 'fa' :小儿科，'ha':皮肤科
+	Begin      string `json:"hospital_name"` //服务开始时间
+	End        string `json:"image"`         //服务结束时间
+	Price      uint32 `json:"price"`         //价格 not nil	单位为元
+	Disabled   bool   `json:"disabled"`      //购买数量 not nil
+}
 type ProblemAndDoctorMap struct {
 	DoctorId  string `json:"doctor_id"`  //科室名称 not nil
 	ProblemId string `json:"problem_id"` //擅长 not nil
@@ -103,7 +123,11 @@ type ProblemIDReponse struct {
 	ErrorMsgReponse
 }
 type ClinicDoctorReponse struct {
-	Doctors []DoctorInfo `json:"doctors"` //	 医生list not nil
+	ClinicInfo []DoctorInfo `json:"clinic_info"`
+	Err        int          `json:"err"` //0 成功,1 失败
+}
+type EmergencyGraphReponse struct {
+	Doctors []ClinicInfo `json:"doctors"` //	 医生list not nil
 	ErrorMsgReponse
 }
 type ClinicNoReponse struct {

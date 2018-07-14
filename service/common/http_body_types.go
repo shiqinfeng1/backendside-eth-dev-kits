@@ -162,3 +162,17 @@ type PaidProblemQueryClinicNoPayload struct {
 	Ask      string `json:"ask" validate:"required"`                         //首次提问的问题文本
 	Platform string `json:"platform" validate:"required,oneof=chunyu guoyi"` //问诊平台
 }
+
+type EmergencyGraphPayload struct {
+	UserId   string `json:"user_id" validate:"required,max=32"`              //用户名 最大长度=32	not nil	用户唯一标识,合作方定义
+	Content  string `json:"content" validate:"required,max=5120"`            //用户提问内容列表
+	Platform string `json:"platform" validate:"required,oneof=chunyu guoyi"` //问诊平台
+}
+type EmergencyGraphCreatePayload struct {
+	ClinicNo       string `json:"clinic_no" validate:"required"`                   //购买的医生列表,使用#进行连接多个医生，不能有空格                                           //
+	UserId         string `json:"user_id" validate:"required,max=32"`              //用户名 最大长度=32	not nil	用户唯一标识,合作方定义
+	Content        string `json:"content" validate:"required,max=5120"`            //首次提问内容                                  //用户提问内容列表
+	PartnerOrderId string `json:"partner_order_id" validate:"required"`            //合作方支付ID
+	Price          int    `json:"price" validate:"required"`                       //价格必须与实时查询到的价格一致	单位为元
+	Platform       string `json:"platform" validate:"required,oneof=chunyu guoyi"` //问诊平台
+}
