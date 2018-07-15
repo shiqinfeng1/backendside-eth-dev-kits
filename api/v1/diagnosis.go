@@ -159,6 +159,22 @@ func GetClinicDoctors(c echo.Context) error {
 	return common.JSONReturns(c, doctorlist)
 }
 
+//获取指定科室和指定城市的医生列表
+func GetAskHistory(c echo.Context) error {
+	p := common.AskHistoryPayload{}
+	if err := c.Bind(&p); err != nil {
+		return err
+	}
+	if err := c.Echo().Validator.Validate(p); err != nil {
+		return err
+	}
+	asklist, err := chunyu.GetClinicDoctors(p)
+	if err != nil {
+		return common.BizError1002
+	}
+	return common.JSONReturns(c, asklist)
+}
+
 //获取推荐的医生列表
 func GetrecommendedDoctors(c echo.Context) error {
 	p := common.RecommendedDoctorsPayload{}
@@ -174,6 +190,42 @@ func GetrecommendedDoctors(c echo.Context) error {
 	}
 	//to be continue...
 	guoyi.GetClinicDoctors()
+
+	return common.JSONReturns(c, doctorlist)
+}
+
+//获取推荐的医生列表
+func GetDoctorDetail(c echo.Context) error {
+	p := common.DoctorDetailPayload{}
+	if err := c.Bind(&p); err != nil {
+		return err
+	}
+	if err := c.Echo().Validator.Validate(p); err != nil {
+		return err
+	}
+	doctorlist, err := chunyu.GetDoctorDetail(p)
+	if err != nil {
+		return common.BizError1002
+	}
+	//to be continue...
+	guoyi.GetClinicDoctors()
+
+	return common.JSONReturns(c, doctorlist)
+}
+
+//获取推荐的医生列表
+func GetProblemDetail(c echo.Context) error {
+	p := common.ProblemDetailPayload{}
+	if err := c.Bind(&p); err != nil {
+		return err
+	}
+	if err := c.Echo().Validator.Validate(p); err != nil {
+		return err
+	}
+	doctorlist, err := chunyu.GetProblemDetail(p)
+	if err != nil {
+		return common.BizError1002
+	}
 
 	return common.JSONReturns(c, doctorlist)
 }
@@ -212,7 +264,7 @@ func GetEmergencyGraph(c echo.Context) error {
 	if err := c.Echo().Validator.Validate(p); err != nil {
 		return err
 	}
-	doctorlist, err := chunyu.GetClinicDoctors(p)
+	doctorlist, err := chunyu.GetEmergencyGraph(p)
 	if err != nil {
 		return common.BizError1002
 	}
@@ -224,7 +276,7 @@ func GetEmergencyGraph(c echo.Context) error {
 
 //众包问题创建
 func EmergencyGraphCreate(c echo.Context) error {
-	p := common.EmergencyGraphPayload{}
+	p := common.EmergencyGraphCreatePayload{}
 	if err := c.Bind(&p); err != nil {
 		return err
 	}
@@ -240,4 +292,109 @@ func EmergencyGraphCreate(c echo.Context) error {
 	}
 
 	return nil
+}
+
+//插叙急诊图文信息
+func GetFastPhoneInfo(c echo.Context) error {
+	p := common.FastPhoneInfoPayload{}
+	if err := c.Bind(&p); err != nil {
+		return err
+	}
+	if err := c.Echo().Validator.Validate(p); err != nil {
+		return err
+	}
+	if p.Platform == "chunyu" {
+		problemid, err := chunyu.GetFastPhoneInfo(p)
+		if err != nil {
+			return common.BizError1002
+		}
+		return common.JSONReturns(c, problemid)
+	}
+
+	return nil
+}
+
+//插叙急诊图文信息
+func FastPhoneOrderCreate(c echo.Context) error {
+	p := common.FastPhoneOrderCreatePayload{}
+	if err := c.Bind(&p); err != nil {
+		return err
+	}
+	if err := c.Echo().Validator.Validate(p); err != nil {
+		return err
+	}
+	if p.Platform == "chunyu" {
+		problemid, err := chunyu.FastPhoneOrderCreate(p)
+		if err != nil {
+			return common.BizError1002
+		}
+		return common.JSONReturns(c, problemid)
+	}
+
+	return nil
+}
+
+//问题追加
+func ProblemAppend(c echo.Context) error {
+	p := common.AppendProblemPayload{}
+	if err := c.Bind(&p); err != nil {
+		return err
+	}
+	if err := c.Echo().Validator.Validate(p); err != nil {
+		return err
+	}
+	if p.Platform == "chunyu" {
+		problemid, err := chunyu.AppendProblem(p)
+		if err != nil {
+			return common.BizError1002
+		}
+		return common.JSONReturns(c, problemid)
+	}
+
+	return nil
+}
+
+//问题追加
+func ProblemAssess(c echo.Context) error {
+	p := common.AssessProblemPayload{}
+	if err := c.Bind(&p); err != nil {
+		return err
+	}
+	if err := c.Echo().Validator.Validate(p); err != nil {
+		return err
+	}
+	if p.Platform == "chunyu" {
+		problemid, err := chunyu.AssessProblem(p)
+		if err != nil {
+			return common.BizError1002
+		}
+		return common.JSONReturns(c, problemid)
+	}
+
+	return nil
+}
+
+//问题删除
+func ProblemDelete(c echo.Context) error {
+	p := common.DeleteProblemPayload{}
+	if err := c.Bind(&p); err != nil {
+		return err
+	}
+	if err := c.Echo().Validator.Validate(p); err != nil {
+		return err
+	}
+	if p.Platform == "chunyu" {
+		problemid, err := chunyu.DeleteProblem(p)
+		if err != nil {
+			return common.BizError1002
+		}
+		return common.JSONReturns(c, problemid)
+	}
+
+	return nil
+}
+
+//问题关闭
+func ProblemClose(c echo.Context) error {
+	return ProblemDelete(c)
 }

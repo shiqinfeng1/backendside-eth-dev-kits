@@ -123,6 +123,21 @@ type ClinicDoctorsPayload struct {
 	City     string `json:"city" validate:"max=32"`                //城市 <32
 	PageParams
 }
+type AskHistoryPayload struct {
+	UserId string `json:"user_id" validate:"required,max=32"` //用户名 最大长度=32	not nil	用户唯一标识,合作方定义
+	PageParams
+}
+type DoctorDetailPayload struct {
+	DoctorId string `json:"doctor_id" validate:"required"`
+	UserId   string `json:"user_id" validate:"required,max=32"`
+	Platform string `json:"platform" validate:"required,oneof=chunyu guoyi"`
+}
+type ProblemDetailPayload struct {
+	ProblemId     int64  `json:"problem_id" validate:"required"`
+	UserId        string `json:"user_id" validate:"required,max=32"`
+	LastContentId uint64 `json:"last_content_id"` //最后一个回复编号,会返回所有大于此编号的回复列表
+	Platform      string `json:"platform" validate:"required,oneof=chunyu guoyi"`
+}
 type RecommendedDoctorsPayload struct {
 	Ask    string `json:"ask" validate:"required"`            //
 	UserId string `json:"user_id" validate:"required,max=32"` //用户名 最大长度=32	not nil	用户唯一标识,合作方定义
@@ -142,6 +157,12 @@ type PaidProblemPayload struct {
 	PartnerOrderId string `json:"partner_order_id" validate:"required"`                                      //唯一标识本次支付行为
 	Platform       string `json:"platform" validate:"required,oneof=chunyu guoyi"`                           //问诊平台
 	PayType        string `json:"pay_type" validate:"required,oneof=qc_hospital_common qc_hospital_upgrade"` //付费方式 二甲医生： qc_hospital_common 三甲医生： qc_hospital_upgrade
+}
+type AppendProblemPayload struct {
+	ProblemId int    `json:"problem_id" validate:"required"`                  //问题编号                                           //
+	UserId    string `json:"user_id" validate:"required,max=32"`              //用户名 最大长度=32	not nil	用户唯一标识,合作方定义
+	Content   string `json:"content" validate:"required,max=5120"`            //唯一标识本次支付行为
+	Platform  string `json:"platform" validate:"required,oneof=chunyu guoyi"` //问诊平台
 }
 type OrientedProblemPayload struct {
 	DoctorIds      string `json:"doctor_ids" validate:"required"`                  //购买的医生列表,使用#进行连接多个医生，不能有空格                                           //
@@ -169,10 +190,34 @@ type EmergencyGraphPayload struct {
 	Platform string `json:"platform" validate:"required,oneof=chunyu guoyi"` //问诊平台
 }
 type EmergencyGraphCreatePayload struct {
-	ClinicNo       string `json:"clinic_no" validate:"required"`                   //购买的医生列表,使用#进行连接多个医生，不能有空格                                           //
+	ClinicNo       string `json:"clinic_no" validate:"required"`                   //必须是春雨开通的科室                                          //
 	UserId         string `json:"user_id" validate:"required,max=32"`              //用户名 最大长度=32	not nil	用户唯一标识,合作方定义
 	Content        string `json:"content" validate:"required,max=5120"`            //首次提问内容                                  //用户提问内容列表
 	PartnerOrderId string `json:"partner_order_id" validate:"required"`            //合作方支付ID
 	Price          int    `json:"price" validate:"required"`                       //价格必须与实时查询到的价格一致	单位为元
 	Platform       string `json:"platform" validate:"required,oneof=chunyu guoyi"` //问诊平台
+}
+type FastPhoneInfoPayload struct {
+	UserId   string `json:"user_id" validate:"required,max=32"`              //用户名 最大长度=32	not nil	用户唯一标识,合作方定义
+	Platform string `json:"platform" validate:"required,oneof=chunyu guoyi"` //问诊平台
+}
+type FastPhoneOrderCreatePayload struct {
+	ClinicNo       string `json:"clinic_no" validate:"required"`        //必须是春雨开通的科室                                          //
+	UserId         string `json:"user_id" validate:"required,max=32"`   //用户名 最大长度=32	not nil	用户唯一标识,合作方定义
+	PartnerOrderId string `json:"partner_order_id" validate:"required"` //合作方支付ID
+	Phone          string `json:"phone" validate:"required"`
+	Platform       string `json:"platform" validate:"required,oneof=chunyu guoyi"` //问诊平台
+}
+type AssessProblemPayload struct {
+	ProblemId  int    `json:"problem_id" validate:"required"`                  //问题编号                                           //
+	UserId     string `json:"user_id" validate:"required,max=32"`              //用户名 最大长度=32	not nil	用户唯一标识,合作方定义
+	Content    string `json:"content" validate:"required,max=5120"`            //问题内容
+	AssessInfo string `json:"assess_info" validate:"required,max=32"`          //如:'{"level": "best", "tag_keys":["3201", "3102"]}'
+	Platform   string `json:"platform" validate:"required,oneof=chunyu guoyi"` //问诊平台
+}
+
+type DeleteProblemPayload struct {
+	UserId    string `json:"user_id" validate:"required,max=32"`              //用户名 最大长度=32	not nil	用户唯一标识,合作方定义
+	ProblemId int    `json:"problem_id" validate:"required"`                  //用户提问内容列表
+	Platform  string `json:"platform" validate:"required,oneof=chunyu guoyi"` //问诊平台
 }
