@@ -10,7 +10,6 @@ import (
 
 // ShootMessage Shoot message
 func ShootMessage(address, topic string, payload interface{}) error {
-
 	request := gorequest.New().Timeout(10 * time.Second)
 	request.SetDebug(cmn.Config().GetBool("nsq.debug"))
 	request.SetLogger(cmn.Logger)

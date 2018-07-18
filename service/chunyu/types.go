@@ -1,12 +1,14 @@
 package chunyu
 
+//ErrorMsgReponse 消息错误格式
 type ErrorMsgReponse struct {
 	Error    int32  `json:"error"`     //  错误码 32	not nil 	0:代表成功,其它:代表异常
 	ErrorMsg string `json:"error_msg"` //  异常信息	否
 }
 
+//UserLoginRequest 春雨用户登录消息格式
 type UserLoginRequest struct {
-	UserId   string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
+	UserID   string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
 	Password string `json:"password"`
 	Lon      string `json:"lon"`
 	Lat      string `json:"lat"`
@@ -14,68 +16,82 @@ type UserLoginRequest struct {
 	Sign     string `json:"sign"`    //签名 <32	not nil
 	Atime    int64  `json:"atime"`   //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 }
+
+//UserLoginReponse 春雨用户登录相应消息格式
 type UserLoginReponse struct {
 	ErrorMsgReponse
 }
 
+//FreeProblemCreateRequest 春雨众包问题创建
 type FreeProblemCreateRequest struct {
 	//科室编号,一次查询只能提交一个科室的对应编号  not nil
 	ClinicNo string `json:"clinic_no"`
 	Partner  string `json:"partner"` //合作方标识 len<32	not nil
 	Sign     string `json:"sign"`    //签名 <32	not nil
-	UserId   string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
+	UserID   string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
 	Atime    int64  `json:"atime"`   //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 	Content  string `json:"content"` //提问的内容
 }
 
+//PaidProblemCreateRequest 春雨众包升级问题创建
 type PaidProblemCreateRequest struct {
 	FreeProblemCreateRequest
-	PartnerOrderId string `json:"partner_order_id"` //唯一标识本次支付行为
+	PartnerOrderID string `json:"partner_order_id"` //唯一标识本次支付行为
 	PayType        string `json:"pay_type"`         //付费方式 二甲医生：qc_hospital_common 三甲医生：qc_hospital_upgrade
 }
+
+//EmergencyGraphCreateRequest 春雨急诊创建
 type EmergencyGraphCreateRequest struct {
 	FreeProblemCreateRequest
-	PartnerOrderId string `json:"partner_order_id"` //唯一标识本次支付行为
+	PartnerOrderID string `json:"partner_order_id"` //唯一标识本次支付行为
 	Price          int    `json:"price"`            //价格必须与实时查询到的价格一致
 }
+
+//OrientedProblemCreateRequest 春雨定向问题创建
 type OrientedProblemCreateRequest struct {
 	//科室编号,一次查询只能提交一个科室的对应编号  not nil
-	DoctorIds      string `json:"doctor_ids"`       //购买的医生列表 使用#进行连接多个医生，不能有空格
+	DoctorIDs      string `json:"doctor_ids"`       //购买的医生列表 使用#进行连接多个医生，不能有空格
 	Content        string `json:"content"`          //提问的内容
 	Partner        string `json:"partner"`          //合作方标识 len<32	not nil
-	PartnerOrderId string `json:"partner_order_id"` //唯一标识本次支付行为
-	Price          int    `json:"price"`            //价格 not nil	单位为分
+	PartnerOrderID string `json:"partner_order_id"` //唯一标识本次支付行为
+	Price          int32  `json:"price"`            //价格 not nil	单位为分
 	Sign           string `json:"sign"`             //签名 <32	not nil
-	UserId         string `json:"user_id"`          //用户名 <32	not nil	用户唯一标识,合作方定义
+	UserID         string `json:"user_id"`          //用户名 <32	not nil	用户唯一标识,合作方定义
 	Atime          int64  `json:"atime"`            //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 }
 
+//FastPhoneOrderRequest 春雨一对一电话创建
 type FastPhoneOrderRequest struct {
 	//科室编号,一次查询只能提交一个科室的对应编号  not nil
 	Phone          string `json:"phone"` //购买的医生列表 使用#进行连接多个医生，不能有空格
 	ClinicNo       string `json:"clinic_no"`
 	Partner        string `json:"partner"`          //合作方标识 len<32	not nil
-	PartnerOrderId string `json:"partner_order_id"` //唯一标识本次支付行为
+	PartnerOrderID string `json:"partner_order_id"` //唯一标识本次支付行为
 	Sign           string `json:"sign"`             //签名 <32	not nil
-	UserId         string `json:"user_id"`          //用户名 <32	not nil	用户唯一标识,合作方定义
+	UserID         string `json:"user_id"`          //用户名 <32	not nil	用户唯一标识,合作方定义
 	Atime          int64  `json:"atime"`            //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 }
+
+//PaidProblemRefundRequest 春雨付费问题退款
 type PaidProblemRefundRequest struct {
-	ProblemId int    `json:"problem_id"`
-	UserId    string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
+	ProblemID int    `json:"problem_id"`
+	UserID    string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
 
 	Partner string `json:"partner"` //合作方标识 len<32	not nil
 	Sign    string `json:"sign"`    //签名 <32	not nil
 	Atime   int64  `json:"atime"`   //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 }
 
+//PaidProblemQueryClinicNoRequest 春雨查询科室号
 type PaidProblemQueryClinicNoRequest struct {
 	Ask     string `json:"ask"`     //首次提问的问题文本
 	Partner string `json:"partner"` //合作方标识 len<32	not nil
 	Sign    string `json:"sign"`    //签名 <32	not nil
-	UserId  string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
+	UserID  string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
 	Atime   int64  `json:"atime"`   //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 }
+
+//ClinicDoctorRequest 春雨查询科室医生
 type ClinicDoctorRequest struct {
 	//科室编号,一次查询只能提交一个科室的对应编号  not nil
 	//'1':妇科,  '2':儿科,  '3':内科,  '4':皮肤性病科,
@@ -85,66 +101,83 @@ type ClinicDoctorRequest struct {
 	ClinicNo string `json:"clinic_no"`
 	Partner  string `json:"partner"`   //合作方标识 len<32	not nil
 	Sign     string `json:"sign"`      //签名 <32	not nil
-	UserId   string `json:"user_id"`   //用户名 <32	not nil	用户唯一标识,合作方定义
+	UserID   string `json:"user_id"`   //用户名 <32	not nil	用户唯一标识,合作方定义
 	Atime    int64  `json:"atime"`     //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 	StartNum uint32 `json:"start_num"` //开始数 <32	not nil	用于支持翻页功能，从0开始计数
 	Count    uint32 `json:"count"`     //每次取的问题数 <32	not nil	最大200
 	Province string `json:"province"`  //省份 <32
 	City     string `json:"city"`      //城市 <32
 }
+
+//AskHistoryRequest 春雨提问历史
 type AskHistoryRequest struct {
 	Partner  string `json:"partner"`   //合作方标识 len<32	not nil
 	Sign     string `json:"sign"`      //签名 <32	not nil
-	UserId   string `json:"user_id"`   //用户名 <32	not nil	用户唯一标识,合作方定义
+	UserID   string `json:"user_id"`   //用户名 <32	not nil	用户唯一标识,合作方定义
 	Atime    int64  `json:"atime"`     //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 	StartNum uint32 `json:"start_num"` //开始数 <32	not nil	用于支持翻页功能，从0开始计数
 	Count    uint32 `json:"count"`     //每次取的问题数 <32	not nil	最大200
 }
+
+//RecommendedDoctorRequest 春雨推荐医生
 type RecommendedDoctorRequest struct {
+	Ask     string `json:"ask"`     //首次提问的内容
 	Partner string `json:"partner"` //合作方标识 len<32	not nil
 	Sign    string `json:"sign"`    //签名 <32	not nil
-	UserId  string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
+	UserID  string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
 	Atime   int64  `json:"atime"`   //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 }
+
+//DoctorDetailRequest 春雨医生详情
 type DoctorDetailRequest struct {
-	DoctorId string `json:"doctor_id"`
-	UserId   string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
+	DoctorID string `json:"doctor_id"`
+	UserID   string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
 	Partner  string `json:"partner"` //合作方标识 len<32	not nil
 	Sign     string `json:"sign"`    //签名 <32	not nil
 	Atime    int64  `json:"atime"`   //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 }
+
+//ProblemDetailRequest 春雨问题详情
 type ProblemDetailRequest struct {
-	ProblemId     int64  `json:"problem_id"`
-	UserId        string `json:"user_id"`
-	LastContentId uint64 `json:"last_content_id"` //最后一个回复编号,会返回所有大于此编号的回复列表
+	ProblemID     int64  `json:"problem_id"`
+	UserID        string `json:"user_id"`
+	LastContentID uint64 `json:"last_content_id"` //最后一个回复编号,会返回所有大于此编号的回复列表
 	Partner       string `json:"partner"`         //合作方标识 len<32	not nil
 	Sign          string `json:"sign"`            //签名 <32	not nil
 	Atime         int64  `json:"atime"`           //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 }
+
+//EmergencyGraphRequest 春雨急诊查询
 type EmergencyGraphRequest struct {
 	Partner string `json:"partner"` //合作方标识 len<32	not nil
 	Sign    string `json:"sign"`    //签名 <32	not nil
-	UserId  string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
+	UserID  string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
 	Atime   int64  `json:"atime"`   //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 	Content string `json:"content"` //提问的内容
 }
+
+//FastPhoneInfoRequest 春雨一对一电话查询
 type FastPhoneInfoRequest struct {
 	Partner string `json:"partner"` //合作方标识 len<32	not nil
 	Sign    string `json:"sign"`    //签名 <32	not nil
-	UserId  string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
+	UserID  string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
 	Atime   int64  `json:"atime"`   //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 }
+
+//AppendProblemRequest 春雨追加问题
 type AppendProblemRequest struct {
-	ProblemId int    `json:"problem_id"`
+	ProblemID int    `json:"problem_id"`
 	Partner   string `json:"partner"` //合作方标识 len<32	not nil
 	Sign      string `json:"sign"`    //签名 <32	not nil
-	UserId    string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
+	UserID    string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
 	Atime     int64  `json:"atime"`   //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 	Content   string `json:"content"` //提问的内容
 }
+
+//AssessProblemRequest 春雨评价问题
 type AssessProblemRequest struct {
-	ProblemId  int    `json:"problem_id"`  //问题编号                                           //
-	UserId     string `json:"user_id"`     //用户名 最大长度=32	not nil	用户唯一标识,合作方定义
+	ProblemID  int    `json:"problem_id"`  //问题编号                                           //
+	UserID     string `json:"user_id"`     //用户名 最大长度=32	not nil	用户唯一标识,合作方定义
 	Content    string `json:"content"`     //问题内容
 	AssessInfo string `json:"assess_info"` //如:'{"level": "best", "tag_keys":["3201", "3102"]}'
 
@@ -154,29 +187,34 @@ type AssessProblemRequest struct {
 
 }
 
+//DeleteProblemRequest 春雨删除问题
 type DeleteProblemRequest struct {
-	ProblemId int    `json:"problem_id"` //问题编号                                           //
-	UserId    string `json:"user_id"`    //用户名 最大长度=32	not nil	用户唯一标识,合作方定义
+	ProblemID int    `json:"problem_id"` //问题编号                                           //
+	UserID    string `json:"user_id"`    //用户名 最大长度=32	not nil	用户唯一标识,合作方定义
 
 	Partner string `json:"partner"` //合作方标识 len<32	not nil
 	Sign    string `json:"sign"`    //签名 <32	not nil
 	Atime   int64  `json:"atime"`   //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 
 }
+
+//DoctorInfo 春雨医生信息详情
 type DoctorInfo struct {
 	ClinicName     string `json:"clinic_name"`      //科室名称 not nil
 	GoodAt         string `json:"good_at"`          //擅长 not nil
 	HospitalName   string `json:"hospital_name"`    //医院名称 not nil
 	Image          string `json:"image"`            //医生照片的 URL <200 not nil
-	Id             string `json:"id"`               //医生id not nil
+	ID             string `json:"id"`               //医生id not nil
 	Name           string `json:"name"`             //医生姓名 not nil
 	Price          uint32 `json:"price"`            //价格 not nil	单位为分
 	PurchaseNum    uint32 `json:"purchase_num"`     //购买数量 not nil
 	Title          string `json:"title"`            //职称 not nil
 	IsFamousDoctor bool   `json:"is_famous_doctor"` //是否是名医咨询 是	名医咨询10次交互/48h后问题关闭；普通定向问题50次交互/48h后问题关闭
 }
+
+//DoctorInfoForHistory 春雨提问历史中的医生详情
 type DoctorInfoForHistory struct {
-	Id         string `json:"id"`          //医生id not nil
+	ID         string `json:"id"`          //医生id not nil
 	Name       string `json:"name"`        //医生姓名 not nil
 	Image      string `json:"image"`       //医生照片的 URL <200 not nil
 	Title      string `json:"title"`       //职称 not nil
@@ -184,13 +222,17 @@ type DoctorInfoForHistory struct {
 	Clinic     string `json:"clinic"`      //科室名称 not nil
 	Hospital   string `json:"hospital"`    //医院名称 not nil
 }
+
+//ContentInfo //提问内容
 type ContentInfo struct {
-	Id            string `json:"id"`              //回复编号
+	ID            string `json:"id"`              //回复编号
 	CreatedTimeMs uint64 `json:"created_time_ms"` //创建问题时间戳
 
 	Type    string `json:"type"`    //p是用户回复,d是医生回复
 	Content string `json:"content"` //同问题追问的 content
 }
+
+//ClinicInfo 科室信息
 type ClinicInfo struct {
 	ClinicName string `json:"clinic_name"` //科室名称 not nil
 	ClinicNo   string `json:"clinic_no"`   //'1':妇科, '15':眼科, '21':产科, 'fa' :小儿科，'ha':皮肤科
@@ -199,13 +241,17 @@ type ClinicInfo struct {
 	Price      uint32 `json:"price"`       //价格 not nil	单位为元
 	Disabled   bool   `json:"disabled"`    //购买数量 not nil
 }
+
+//ClinicInfoLite 科室信息
 type ClinicInfoLite struct {
 	ClinicName string `json:"clinic_name"` //科室名称 not nil
 	ClinicNo   string `json:"clinic_no"`   //'1':妇科, '15':眼科, '21':产科, 'fa' :小儿科，'ha':皮肤科
 	Icon       string `json:"icon"`        //科室对应的图标
 }
+
+//ProblemInfo 问题信息
 type ProblemInfo struct {
-	Id int32 `json:"id"` //问题id not nil
+	ID int32 `json:"id"` //问题id not nil
 	/*
 		i 初始化,空白问题或未付款问题---空白问题
 		n 新问题
@@ -230,34 +276,46 @@ type ProblemInfo struct {
 	CreatedTime   string `json:"created_time"`    //创建时间:'%Y-%m-%d %H: %M:%S'
 	Star          int    `json:"star"`            //问题星级
 }
+
+//ProblemAndDoctorMap 问题和医生信息
 type ProblemAndDoctorMap struct {
-	DoctorId  string `json:"doctor_id"`  //科室名称 not nil
-	ProblemId string `json:"problem_id"` //擅长 not nil
+	DoctorID  string `json:"doctor_id"`  //
+	ProblemID int32  `json:"problem_id"` //
 }
+
+//ProblemIDReponse 问题响应
 type ProblemIDReponse struct {
 	ProblemID int32 `json:"problem_id"` //	 问题ID
 	ErrorMsgReponse
 }
+
+//FastPhoneOrderReponse 一对一查询响应
 type FastPhoneOrderReponse struct {
-	ServiceId int `json:"service_id"` //	 服务ID
+	ServiceID int `json:"service_id"` //	 服务ID
 	ErrorMsgReponse
 }
+
+//ClinicDoctorReponse 科室医生响应
 type ClinicDoctorReponse struct {
 	Doctors []DoctorInfo `json:"doctors"`
 	ErrorMsgReponse
 }
+
+//AskHistoryReponse 提问历史响应
 type AskHistoryReponse struct {
 	Problem ProblemInfo          `json:"problem"`
 	Doctor  DoctorInfoForHistory `json:"doctor"`
 	ErrorMsgReponse
 }
+
+//DoctorDetailReponse 医生详情响应
 type DoctorDetailReponse struct {
 	ClinicName     string `json:"clinic_name"`      //科室名称 not nil
 	GoodAt         string `json:"good_at"`          //擅长 not nil
 	Hospital       string `json:"hospital"`         //医院名称 not nil
 	HospitalGrade  string `json:"hospital_grade"`   //医院级别 not nil
 	Image          string `json:"image"`            //医生照片的 URL <200 not nil
-	Id             string `json:"id"`               //医生id not nil
+	ID             string `json:"id"`               //医生id not nil
 	Name           string `json:"name"`             //医生姓名 not nil
 	Title          string `json:"title"`            //职称 not nil
 	Price          uint32 `json:"price"`            //价格 not nil	单位为分
@@ -271,23 +329,33 @@ type DoctorDetailReponse struct {
 	FansNum        int    `json:"fans_num"`         //粉丝数量
 	ErrorMsgReponse
 }
+
+//ProblemDetailReponse 问题详情响应
 type ProblemDetailReponse struct {
 	Problem ProblemInfo          `json:"problem"`
 	Doctor  DoctorInfoForHistory `json:"doctor"`
 	Content []ContentInfo        `json:"content"`
 	ErrorMsgReponse
 }
+
+//EmergencyGraphReponse 急诊查询响应
 type EmergencyGraphReponse struct {
 	ClinicInfo []ClinicInfo `json:"clinic_info"` //	 医生list not nil
 	Err        int          `json:"err"`         //0 成功,1 失败
 }
+
+//FastPhoneInfoReponse 一对一电话响应
 type FastPhoneInfoReponse struct {
 	ClinicInfo []ClinicInfoLite `json:"clinic_info"` //	 医生list not nil
 	Err        int              `json:"err"`         //0 成功,1 失败
 }
+
+//ClinicNoReponse 科室号响应
 type ClinicNoReponse struct {
 	ClinicNo int `json:"clinic_no"` //	 科室号
 }
+
+//ProblemAndDoctorReponse 问题和医生响应
 type ProblemAndDoctorReponse struct {
 	Problems []ProblemAndDoctorMap `json:"problems"` //	 医生list not nil
 	ErrorMsgReponse

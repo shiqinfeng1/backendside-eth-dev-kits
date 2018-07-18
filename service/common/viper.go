@@ -13,6 +13,7 @@ var (
 	cfgData = viper.New()
 )
 
+//InitConfig 读入配置
 func InitConfig(cfgFile string) {
 	// Don't forget to read config either from cfgFile or from home directory!
 	if cfgFile != "" {
@@ -72,6 +73,7 @@ func InitConfig(cfgFile string) {
 
 }
 
+//Config 获得配置
 func Config() *viper.Viper {
 	return cfgData
 }

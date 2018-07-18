@@ -11,7 +11,7 @@ chunyu:
   partner: lianchuangzhongyi
   partnerKey: lY0Qk1Rosy6KuX87
   domain: http://test.chunyu.me     #http://test.chunyu.me https://www.chunyuyisheng.com
-  debug: false
+  debug: true
 nsq:
   nodeAddress: 127.0.0.1:4151
   maxInFlight: 100

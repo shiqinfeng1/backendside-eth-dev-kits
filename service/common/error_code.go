@@ -8,6 +8,8 @@ var (
 
 	// ErrorCode0 正常值
 	ErrorCode0 = "0"
+	// ErrorCode1 错误值
+	ErrorCode1 = "1"
 
 	// ErrorCode9999 系统异常
 	ErrorCode9999 = "9999"

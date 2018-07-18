@@ -1,10 +1,10 @@
 package common
 
 const (
-	// NSQ Topic
-
+	//TopicChunyuDoctorResponse 医生回复消息topic
 	TopicChunyuDoctorResponse = "topicChunyuDoctorResponse"
-	TopicChunyuQuestionClose  = "topicChunyuQuestionClose"
+	//TopicChunyuQuestionClose 问题关闭消息topic
+	TopicChunyuQuestionClose = "topicChunyuQuestionClose"
 
 	// NSQ CHANNEL
 

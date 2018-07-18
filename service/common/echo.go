@@ -51,7 +51,7 @@ func EchoHTTPErrorHandler(e *echo.Echo) echo.HTTPErrorHandler {
 				}
 			} else {
 				// 统一封装返回值
-				if err := c.JSON(code, ErrorReturns(errcode, rmsg)); err != nil {
+				if err := c.JSON(code, ErrorReturns(c, errcode, rmsg)); err != nil {
 					goto ERROR
 				}
 			}
@@ -77,7 +77,8 @@ func echoInit(e *echo.Echo) {
 	e.Validator = &SimpleValidator{Validator: validator.New()}
 }
 
-func InitHttpService() (e *echo.Echo) {
+//InitHTTPService 启动echo服务
+func InitHTTPService() (e *echo.Echo) {
 	e = echo.New()
 	echoInit(e)
 	e.Use(emw.CORSWithConfig(emw.CORSConfig{
@@ -87,11 +88,13 @@ func InitHttpService() (e *echo.Echo) {
 	}))
 	return e
 }
-func RunHttpService(e *echo.Echo) {
+
+//RunHTTPService 运行echo服务
+func RunHTTPService(e *echo.Echo) {
 
 	srvAddr := ":" + Config().GetString("httpSrvPort")
 
-	log.Printf("Listening and serving HTTP on %s\n", srvAddr)
+	Logger.Printf("Listening and serving HTTP on %s\n", srvAddr)
 	// Start server
 	go func() {
 		if err := e.Start(srvAddr); err != nil {
@@ -109,5 +112,5 @@ func RunHttpService(e *echo.Echo) {
 	if err := e.Shutdown(ctx); err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Diagnosis Server exit")
+	Logger.Printf("Diagnosis Server exit\n")
 }

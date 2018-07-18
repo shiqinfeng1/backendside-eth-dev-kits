@@ -49,7 +49,7 @@ func MysqlBegin() *GormDB {
 }
 
 // DBCommit 提交并关闭transaction
-func (c *GormDB) MYsqlCommit() {
+func (c *GormDB) MysqlCommit() {
 	if c.gdbDone {
 		return
 	}

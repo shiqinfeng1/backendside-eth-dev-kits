@@ -31,7 +31,7 @@ func InitConfig() error {
 
 	globalConfig.NsqAddress = cmn.Config().GetString("nsq.nodeAddress")
 	globalConfig.MaxInFlight = cmn.Config().GetInt("nsq.maxInFlight")
-	globalConfig.Lookups[0] = cmn.Config().GetString("nsq.LookupsAddress")
+	globalConfig.Lookups = []string{cmn.Config().GetString("nsq.LookupsAddress")}
 
 	return nil
 }

@@ -1,6 +1,8 @@
 package command
 
 import (
+	"github.com/labstack/gommon/log"
+
 	"github.com/shiqinfeng1/chunyuyisheng/service/nsqs"
 
 	"github.com/shiqinfeng1/chunyuyisheng/api/v1"
@@ -11,13 +13,19 @@ import (
 var diagCmd = &cobra.Command{
 	Use:   "consult",
 	Short: "start a consult backend service",
-
-	Run: func(cmd *cobra.Command, args []string) {
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		common.Logger = log.New("consult")
 		//db.InitMysql()
+		if err := nsqs.InitConfig(); err != nil {
+			return err
+		}
 		nsqs.Start()
-		httpServer := common.InitHttpService()
+		return nil
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		httpServer := common.InitHTTPService()
 		v1.RegisterDiagAPI(httpServer)
-		common.RunHttpService(httpServer)
+		common.RunHTTPService(httpServer)
 		return
 	},
 }
