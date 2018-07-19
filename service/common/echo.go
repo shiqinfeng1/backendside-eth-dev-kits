@@ -81,6 +81,7 @@ func echoInit(e *echo.Echo) {
 func InitHTTPService() (e *echo.Echo) {
 	e = echo.New()
 	echoInit(e)
+	e.Use(emw.Recover())
 	e.Use(emw.CORSWithConfig(emw.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},

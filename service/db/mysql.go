@@ -17,7 +17,14 @@ type GormDB struct {
 	gdbDone bool
 }
 
-// InitDB 初始化数据库
+// Migrate ...
+func migrate() {
+	idb := MysqlBegin()
+	idb.AutoMigrate(&UserInfo{}, &ProblemInfo{}, &AppendProblemInfo{}, &AssessProblemInfo{})
+	idb.MysqlCommit()
+}
+
+// InitMysql 初始化数据库
 func InitMysql() {
 	// var connstring string
 	idb, err := gorm.Open("mysql",
@@ -31,15 +38,28 @@ func InitMysql() {
 	idb.DB().SetMaxOpenConns(cmn.Config().GetInt("mysql.maxOpen"))
 	idb.LogMode(cmn.Config().GetBool("mysql.debug"))
 
+	if idb.HasTable(&UserInfo{}) == false {
+		idb.CreateTable(&UserInfo{})
+	}
+	if idb.HasTable(&ProblemInfo{}) == false {
+		idb.CreateTable(&ProblemInfo{})
+	}
+	if idb.HasTable(&AppendProblemInfo{}) == false {
+		idb.CreateTable(&AppendProblemInfo{})
+	}
+	if idb.HasTable(&AssessProblemInfo{}) == false {
+		idb.CreateTable(&AssessProblemInfo{})
+	}
 	mysql = idb
+	migrate()
 }
 
-// DBClose 关闭数据库
+// MysqlClose 关闭数据库
 func MysqlClose() {
 	mysql.Close()
 }
 
-// DBBegin 打开一个transaction
+// MysqlBegin 打开一个transaction
 func MysqlBegin() *GormDB {
 	txn := mysql.Begin()
 	if txn.Error != nil {
@@ -48,7 +68,7 @@ func MysqlBegin() *GormDB {
 	return &GormDB{txn, false}
 }
 
-// DBCommit 提交并关闭transaction
+// MysqlCommit 提交并关闭transaction
 func (c *GormDB) MysqlCommit() {
 	if c.gdbDone {
 		return
@@ -60,7 +80,7 @@ func (c *GormDB) MysqlCommit() {
 	}
 }
 
-// DBRollback 回滚并关闭transaction
+// MysqlRollback 回滚并关闭transaction
 func (c *GormDB) MysqlRollback() {
 	if c.gdbDone {
 		return

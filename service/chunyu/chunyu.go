@@ -3,6 +3,7 @@ package chunyu
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -54,11 +55,15 @@ func QuestionCloseCallback(payload cmn.ChunyuQuestionClosePayload) (err error) {
 
 func createUserSyncToDB(logininfo UserLoginRequest) error {
 	userinfo := &db.UserInfo{}
-	userinfo.IsSynced = true
-	userinfo.UserID = logininfo.UserID
 
 	dbconn := db.MysqlBegin()
 	defer dbconn.MysqlRollback()
+	dbconn.Model(&db.UserInfo{}).Where("user_id = ?", logininfo.UserID).Find(&userinfo)
+	if userinfo.IsSynced == true {
+		return nil
+	}
+	userinfo.IsSynced = true
+	userinfo.UserID = logininfo.UserID
 
 	err := dbconn.Create(userinfo).Error
 	if err != nil {
@@ -112,14 +117,14 @@ func FreeProblemCreate(payload cmn.FreeProblemPayload) (*ProblemIDReponse, error
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
 		return nil, err
 	}
-
+	content, _ := json.Marshal(payload.Content)
 	reqArgs := FreeProblemCreateRequest{
 		ClinicNo: payload.ClinicNo,
 		Partner:  cmn.Config().GetString("chunyu.partner"),
 		Sign:     getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(now, 10), payload.UserID),
 		UserID:   payload.UserID,
 		Atime:    now,
-		Content:  payload.Content,
+		Content:  string(content),
 	}
 
 	var ProblemID ProblemIDReponse
@@ -186,6 +191,7 @@ func PaidProblemCreate(payload cmn.PaidProblemPayload) (*ProblemIDReponse, error
 		return nil, err
 	}
 
+	content, _ := json.Marshal(payload.Content)
 	reqArgs := PaidProblemCreateRequest{
 		FreeProblemCreateRequest{
 			ClinicNo: payload.ClinicNo,
@@ -193,7 +199,7 @@ func PaidProblemCreate(payload cmn.PaidProblemPayload) (*ProblemIDReponse, error
 			Sign:     getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(now, 10), payload.UserID),
 			UserID:   payload.UserID,
 			Atime:    now,
-			Content:  payload.Content,
+			Content:  string(content),
 		},
 		payload.PartnerOrderID,
 		payload.PayType,
@@ -412,6 +418,7 @@ func OrientedProblemCreate(payload cmn.OrientedProblemPayload) (*ProblemAndDocto
 		return nil, err
 	}
 
+	content, _ := json.Marshal(payload.Content)
 	reqArgs := OrientedProblemCreateRequest{
 		DoctorIDs:      payload.DoctorIDs,
 		Partner:        cmn.Config().GetString("chunyu.partner"),
@@ -419,7 +426,7 @@ func OrientedProblemCreate(payload cmn.OrientedProblemPayload) (*ProblemAndDocto
 		UserID:         payload.UserID,
 		Atime:          now,
 		PartnerOrderID: payload.PartnerOrderID,
-		Content:        payload.Content,
+		Content:        string(content),
 		Price:          payload.Price,
 	}
 
@@ -445,12 +452,13 @@ func GetEmergencyGraph(payload cmn.EmergencyGraphPayload) (*EmergencyGraphRepons
 		return nil, err
 	}
 
+	content, _ := json.Marshal(payload.Content)
 	reqArgs := EmergencyGraphRequest{
 		Partner: cmn.Config().GetString("chunyu.partner"),
 		Sign:    getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(now, 10), payload.UserID),
 		UserID:  payload.UserID,
 		Atime:   now,
-		Content: payload.Content,
+		Content: string(content),
 	}
 
 	var clinicList EmergencyGraphReponse
@@ -473,6 +481,7 @@ func EmergencyGraphCreate(payload cmn.EmergencyGraphCreatePayload) (*ProblemIDRe
 		return nil, err
 	}
 
+	content, _ := json.Marshal(payload.Content)
 	reqArgs := EmergencyGraphCreateRequest{
 		FreeProblemCreateRequest{
 			ClinicNo: payload.ClinicNo,
@@ -480,7 +489,7 @@ func EmergencyGraphCreate(payload cmn.EmergencyGraphCreatePayload) (*ProblemIDRe
 			Sign:     getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(now, 10), payload.UserID),
 			UserID:   payload.UserID,
 			Atime:    now,
-			Content:  payload.Content,
+			Content:  string(content),
 		},
 		payload.PartnerOrderID,
 		payload.Price,
@@ -557,14 +566,14 @@ func FastPhoneOrderCreate(payload cmn.FastPhoneOrderCreatePayload) (*FastPhoneOr
 //AppendProblem 追加问题
 func AppendProblem(payload cmn.AppendProblemPayload) (*ErrorMsgReponse, error) {
 	now := time.Now().Unix()
-
+	content, _ := json.Marshal(payload.Content)
 	reqArgs := AppendProblemRequest{
 		ProblemID: payload.ProblemID,
 		Partner:   cmn.Config().GetString("chunyu.partner"),
 		Sign:      getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(now, 10), payload.UserID),
 		UserID:    payload.UserID,
 		Atime:     now,
-		Content:   payload.Content,
+		Content:   string(content),
 	}
 
 	var resp ErrorMsgReponse
@@ -582,9 +591,10 @@ func AppendProblem(payload cmn.AppendProblemPayload) (*ErrorMsgReponse, error) {
 func AssessProblem(payload cmn.AssessProblemPayload) (*ErrorMsgReponse, error) {
 	now := time.Now().Unix()
 
+	content, _ := json.Marshal(payload.Content)
 	reqArgs := AssessProblemRequest{
 		ProblemID:  payload.ProblemID,
-		Content:    payload.Content,
+		Content:    string(content),
 		UserID:     payload.UserID,
 		AssessInfo: payload.AssessInfo,
 		Partner:    cmn.Config().GetString("chunyu.partner"),

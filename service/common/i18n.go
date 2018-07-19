@@ -11,7 +11,6 @@ import (
 
 // TLang 返回绑定 accept-language 的i18n方法
 func TLang(c echo.Context) i18n.TranslateFunc {
-	fmt.Println("GetAcceptLanguage(c)=", GetAcceptLanguage(c))
-	fmt.Println("locale.Locate(GetAcceptLanguage(c))=", locale.Locate(GetAcceptLanguage(c)))
+	fmt.Println("Request().Header.Get(Accept-Language)", GetAcceptLanguage(c))
 	return locale.Locate(GetAcceptLanguage(c))
 }
