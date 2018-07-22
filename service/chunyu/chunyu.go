@@ -181,6 +181,56 @@ func createOrientedProblemInfoToDB(req OrientedProblemCreateRequest, rep Problem
 	dbconn.MysqlCommit()
 	return nil
 }
+func updateProblemInfoToDB(userid string, problemid int, item string, value interface{}) error {
+
+	dbconn := db.MysqlBegin()
+	defer dbconn.MysqlRollback()
+
+	err := dbconn.Model(&db.ProblemInfo{}).
+		Where("problem_id = ? AND user_id = ?", problemid, userid).
+		Update(item, value).Error
+	if err != nil {
+		cmn.Logger.Error(err)
+		return err
+	}
+	dbconn.MysqlCommit()
+	return nil
+}
+func appendProblemInfoToDB(req AppendProblemRequest) error {
+	appendprobleminfo := &db.AppendProblemInfo{}
+	appendprobleminfo.Content = req.Content
+	appendprobleminfo.ProblemID = req.ProblemID
+	appendprobleminfo.UserID = req.UserID
+
+	dbconn := db.MysqlBegin()
+	defer dbconn.MysqlRollback()
+
+	err := dbconn.Create(appendprobleminfo).Error
+	if err != nil {
+		cmn.Logger.Error(err)
+		return err
+	}
+	dbconn.MysqlCommit()
+	return nil
+}
+func assessProblemInfoToDB(req AssessProblemRequest) error {
+	assessprobleminfo := &db.AssessProblemInfo{}
+	assessprobleminfo.AssessContent = req.Content
+	assessprobleminfo.ProblemID = req.ProblemID
+	assessprobleminfo.UserID = req.UserID
+	assessprobleminfo.AssessInfo = req.AssessInfo
+
+	dbconn := db.MysqlBegin()
+	defer dbconn.MysqlRollback()
+
+	err := dbconn.Create(assessprobleminfo).Error
+	if err != nil {
+		cmn.Logger.Error(err)
+		return err
+	}
+	dbconn.MysqlCommit()
+	return nil
+}
 
 //PaidProblemCreate 创建众包升级问题
 func PaidProblemCreate(payload cmn.PaidProblemPayload) (*ProblemIDReponse, error) {
@@ -230,7 +280,7 @@ func PaidProblemRefund(payload cmn.PaidProblemRefundPayload) (*ErrorMsgReponse, 
 	}
 
 	var resp ErrorMsgReponse
-	_, _, errs := newRequest().Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/problem/refund").
+	_, _, errs := newRequest().Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/server/problem/refund").
 		Send(reqArgs).
 		EndStruct(&resp)
 	if errs != nil {
@@ -249,16 +299,17 @@ func PaidProblemQueryClinicNo(payload cmn.PaidProblemQueryClinicNoPayload) (*Cli
 		return nil, err
 	}
 
+	content, _ := json.Marshal(payload.Ask)
 	reqArgs := PaidProblemQueryClinicNoRequest{
 		Partner: cmn.Config().GetString("chunyu.partner"),
 		Sign:    getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(now, 10), payload.UserID),
 		UserID:  payload.UserID,
 		Atime:   now,
-		Ask:     payload.Ask,
+		Ask:     string(content),
 	}
 
 	var clinicno ClinicNoReponse
-	_, _, errs := newRequest().Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/problem/get_problem_clinic_no").
+	_, _, errs := newRequest().Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/server/problem/get_problem_clinic_no/").
 		Send(reqArgs).
 		EndStruct(&clinicno)
 	if errs != nil {
@@ -296,7 +347,7 @@ func GetClinicDoctors(payload cmn.ClinicDoctorsPayload) (*ClinicDoctorReponse, e
 }
 
 //GetAskHistory 获取提问历史
-func GetAskHistory(payload cmn.AskHistoryPayload) (*AskHistoryReponse, error) {
+func GetAskHistory(payload cmn.AskHistoryPayload) (*[]AskHistoryReponse, error) {
 	now := time.Now().Unix()
 
 	if userIsSynced(payload.UserID) == false {
@@ -313,14 +364,16 @@ func GetAskHistory(payload cmn.AskHistoryPayload) (*AskHistoryReponse, error) {
 		Count:    payload.PerPage,
 	}
 
-	var history AskHistoryReponse
-	_, _, errs := newRequest().Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/server/problem/list/my").
+	var history []AskHistoryReponse
+
+	_, bodyBytes, errs := newRequest().Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/server/problem/list/my").
 		Send(reqArgs).
-		EndStruct(&history)
+		EndBytes()
 	if errs != nil {
 		err := fmt.Errorf("chunyu.GetAskHistory error: %q", errs)
 		return nil, err
 	}
+	json.Unmarshal(bodyBytes, &history)
 	return &history, nil
 }
 
@@ -333,8 +386,9 @@ func GetRecommendedDoctors(payload cmn.RecommendedDoctorsPayload) (*ClinicDoctor
 		return nil, err
 	}
 
+	content, _ := json.Marshal(payload.Ask)
 	reqArgs := RecommendedDoctorRequest{
-		Ask:     payload.Ask,
+		Ask:     string(content),
 		Partner: cmn.Config().GetString("chunyu.partner"),
 		Sign:    getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(now, 10), payload.UserID),
 		UserID:  payload.UserID,
@@ -370,13 +424,14 @@ func GetDoctorDetail(payload cmn.DoctorDetailPayload) (*DoctorDetailReponse, err
 	}
 
 	var doctorsdetail DoctorDetailReponse
-	_, _, errs := newRequest().Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/server/doctor/detail").
+	_, bodyBytes, errs := newRequest().Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/server/doctor/detail").
 		Send(reqArgs).
-		EndStruct(&doctorsdetail)
+		EndBytes()
 	if errs != nil {
 		err := fmt.Errorf("chunyu.GetDoctorDetail error: %q", errs)
 		return nil, err
 	}
+	json.Unmarshal(bodyBytes, &doctorsdetail)
 	return &doctorsdetail, nil
 }
 
@@ -496,7 +551,7 @@ func EmergencyGraphCreate(payload cmn.EmergencyGraphCreatePayload) (*ProblemIDRe
 	}
 
 	var ProblemID ProblemIDReponse
-	_, _, errs := newRequest().Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/problem/create_emergency_graph/").
+	_, _, errs := newRequest().Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/server/problem/create_emergency_graph/").
 		Send(reqArgs).
 		EndStruct(&ProblemID)
 	if errs != nil {
@@ -584,7 +639,8 @@ func AppendProblem(payload cmn.AppendProblemPayload) (*ErrorMsgReponse, error) {
 		err := fmt.Errorf("chunyu.AppendProblem error: %q", errs)
 		return nil, err
 	}
-	return &resp, nil
+	err := appendProblemInfoToDB(reqArgs)
+	return &resp, err
 }
 
 //AssessProblem 评价问题
@@ -592,11 +648,12 @@ func AssessProblem(payload cmn.AssessProblemPayload) (*ErrorMsgReponse, error) {
 	now := time.Now().Unix()
 
 	content, _ := json.Marshal(payload.Content)
+	assess, _ := json.Marshal(payload.AssessInfo)
 	reqArgs := AssessProblemRequest{
 		ProblemID:  payload.ProblemID,
 		Content:    string(content),
 		UserID:     payload.UserID,
-		AssessInfo: payload.AssessInfo,
+		AssessInfo: string(assess),
 		Partner:    cmn.Config().GetString("chunyu.partner"),
 		Sign:       getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(now, 10), payload.UserID),
 		Atime:      now,
@@ -610,11 +667,12 @@ func AssessProblem(payload cmn.AssessProblemPayload) (*ErrorMsgReponse, error) {
 		err := fmt.Errorf("chunyu.AssessProblem error: %q", errs)
 		return nil, err
 	}
-	return &resp, nil
+	err := assessProblemInfoToDB(reqArgs)
+	return &resp, err
 }
 
 //DeleteProblem 删除问题
-func DeleteProblem(payload cmn.DeleteProblemPayload) (*ErrorMsgReponse, error) {
+func DeleteProblem(payload cmn.DeleteProblemPayload, flag string) (*ErrorMsgReponse, error) {
 	now := time.Now().Unix()
 
 	reqArgs := DeleteProblemRequest{
@@ -633,5 +691,11 @@ func DeleteProblem(payload cmn.DeleteProblemPayload) (*ErrorMsgReponse, error) {
 		err := fmt.Errorf("chunyu.AssessProblem error: %q", errs)
 		return nil, err
 	}
+	updateProblemInfoToDB(reqArgs.UserID, reqArgs.ProblemID, flag, true)
 	return &resp, nil
+}
+
+//CloseProblem 关闭问题
+func CloseProblem(payload cmn.DeleteProblemPayload, flag string) (*ErrorMsgReponse, error) {
+	return DeleteProblem(payload, flag)
 }

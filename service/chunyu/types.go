@@ -171,7 +171,7 @@ type AppendProblemRequest struct {
 	Sign      string `json:"sign"`    //签名 <32	not nil
 	UserID    string `json:"user_id"` //用户名 <32	not nil	用户唯一标识,合作方定义
 	Atime     int64  `json:"atime"`   //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
-	Content   string `json:"content"` //提问的内容
+	Content   string `json:"content"` //评价内容
 }
 
 //AssessProblemRequest 春雨评价问题
@@ -305,28 +305,31 @@ type ClinicDoctorReponse struct {
 type AskHistoryReponse struct {
 	Problem ProblemInfo          `json:"problem"`
 	Doctor  DoctorInfoForHistory `json:"doctor"`
-	ErrorMsgReponse
 }
 
 //DoctorDetailReponse 医生详情响应
 type DoctorDetailReponse struct {
-	ClinicName     string `json:"clinic_name"`      //科室名称 not nil
-	GoodAt         string `json:"good_at"`          //擅长 not nil
-	Hospital       string `json:"hospital"`         //医院名称 not nil
-	HospitalGrade  string `json:"hospital_grade"`   //医院级别 not nil
-	Image          string `json:"image"`            //医生照片的 URL <200 not nil
-	ID             string `json:"id"`               //医生id not nil
-	Name           string `json:"name"`             //医生姓名 not nil
-	Title          string `json:"title"`            //职称 not nil
-	Price          uint32 `json:"price"`            //价格 not nil	单位为分
-	SolutionScore  uint32 `json:"solution_score"`   //专业度指数
-	RecommendRate  string `json:"recommend_rate"`   //推荐指数
-	IsFamousDoctor bool   `json:"is_famous_doctor"` //是否是名医咨询 是	名医咨询10次交互/48h后问题关闭；普通定向问题50次交互/48h后问题关闭
-	Description    string `json:"description"`      //专家简介
-	GoodRate       string `json:"good_rate"`        //好评率
-	RewardNum      int    `json:"reward_num"`       //送心意数量
-	ReplyNum       int    `json:"reply_num"`        //咨询数量
-	FansNum        int    `json:"fans_num"`         //粉丝数量
+	ClinicName     string   `json:"clinic_name"`      //科室名称 not nil
+	GoodAt         string   `json:"good_at"`          //擅长 not nil
+	Hospital       string   `json:"hospital"`         //医院名称 not nil
+	HospitalGrade  string   `json:"hospital_grade"`   //医院级别 not nil
+	Image          string   `json:"image"`            //医生照片的 URL <200 not nil
+	ID             string   `json:"id"`               //医生id not nil
+	Name           string   `json:"name"`             //医生姓名 not nil
+	Title          string   `json:"title"`            //职称 not nil
+	Price          uint32   `json:"price"`            //价格 not nil	单位为分
+	SolutionScore  uint32   `json:"solution_score"`   //专业度指数
+	RecommendRate  string   `json:"recommend_rate"`   //推荐指数
+	IsFamousDoctor bool     `json:"is_famous_doctor"` //是否是名医咨询 是	名医咨询10次交互/48h后问题关闭；普通定向问题50次交互/48h后问题关闭
+	Description    string   `json:"description"`      //专家简介
+	GoodRate       string   `json:"good_rate"`        //好评率
+	Tags           []string `json:"tags"`
+	RewardNum      int      `json:"reward_num"` //送心意数量
+	ReplyNum       int      `json:"reply_num"`  //咨询数量
+	FansNum        int      `json:"fans_num"`   //粉丝数量
+	Welcome        string   `json:"welcome"`
+	Education      string   `json:"education"`
+	Achievement    string   `json:"achievement"`
 	ErrorMsgReponse
 }
 
@@ -352,7 +355,8 @@ type FastPhoneInfoReponse struct {
 
 //ClinicNoReponse 科室号响应
 type ClinicNoReponse struct {
-	ClinicNo int `json:"clinic_no"` //	 科室号
+	ClinicNo string `json:"clinic_no"` //	 科室号
+	ErrorMsgReponse
 }
 
 //ProblemAndDoctorReponse 问题和医生响应

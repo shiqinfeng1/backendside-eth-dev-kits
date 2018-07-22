@@ -1,6 +1,13 @@
 package v1
 
 import (
+	"fmt"
+	"io"
+	"mime/multipart"
+	"os"
+	"strconv"
+	"time"
+
 	"github.com/labstack/echo"
 	"github.com/shiqinfeng1/chunyuyisheng/service/chunyu"
 	"github.com/shiqinfeng1/chunyuyisheng/service/common"
@@ -226,7 +233,9 @@ func GetProblemDetail(c echo.Context) error {
 	if err != nil {
 		return common.BizError1002
 	}
-
+	if doctorlist.Error > 0 {
+		return common.JSONReturns(c, &chunyu.ErrorMsgReponse{Error: doctorlist.Error, ErrorMsg: doctorlist.ErrorMsg})
+	}
 	return common.JSONReturns(c, doctorlist)
 }
 
@@ -384,17 +393,151 @@ func ProblemDelete(c echo.Context) error {
 		return err
 	}
 	if p.Platform == "chunyu" {
-		ProblemID, err := chunyu.DeleteProblem(p)
+		ProblemID, err := chunyu.DeleteProblem(p, "is_deleted")
 		if err != nil {
 			return common.BizError1002
 		}
 		return common.JSONReturns(c, ProblemID)
 	}
-
 	return nil
 }
 
 //ProblemClose :问题关闭
 func ProblemClose(c echo.Context) error {
-	return ProblemDelete(c)
+	p := common.DeleteProblemPayload{}
+	if err := c.Bind(&p); err != nil {
+		return err
+	}
+	if err := c.Echo().Validator.Validate(p); err != nil {
+		return err
+	}
+	if p.Platform == "chunyu" {
+		ProblemID, err := chunyu.DeleteProblem(p, "is_closed")
+		if err != nil {
+			return common.BizError1002
+		}
+		return common.JSONReturns(c, ProblemID)
+	}
+	return nil
+}
+
+//检查目录是否存在
+func checkFileIsExist(filename string) bool {
+	var exist = true
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		fmt.Print(filename + " not exist\n")
+		exist = false
+	}
+	return exist
+}
+
+//保存文件
+func saveMediaFile(dir, userid, index string, src multipart.File) map[string]interface{} {
+	result := make(map[string]interface{})
+	year := strconv.Itoa(time.Now().Year())
+	month := strconv.Itoa(int(time.Now().Month()))
+	day := strconv.Itoa(time.Now().Day())
+
+	//检查文件存储路径是否存在
+	boolImagesexist := checkFileIsExist(dir)
+	if !boolImagesexist {
+		err1 := os.Mkdir(dir, os.ModePerm) //创建文件夹
+		if err1 != nil {
+			common.Logger.Error(err1)
+			result["result"] = "file create fail"
+			return result
+		}
+	}
+	dir = dir + "/" + year
+	boolYearexist := checkFileIsExist(dir)
+	if !boolYearexist {
+		err1 := os.Mkdir(dir, os.ModePerm) //创建文件夹
+		if err1 != nil {
+			common.Logger.Error(err1)
+			result["result"] = "file create fail"
+			return result
+		}
+	}
+	dir = dir + "/" + month
+	boolMonthexist := checkFileIsExist(dir)
+	if !boolMonthexist {
+		err1 := os.Mkdir(dir, os.ModePerm) //创建文件夹
+		if err1 != nil {
+			common.Logger.Error(err1)
+			result["result"] = "file create fail"
+			return result
+		}
+	}
+	dir = dir + "/" + day
+	boolDayexist := checkFileIsExist(dir)
+	if !boolDayexist {
+		err1 := os.Mkdir(dir, os.ModePerm) //创建文件夹
+		if err1 != nil {
+			common.Logger.Error(err1)
+			result["result"] = "file create fail"
+			return result
+		}
+	}
+	dir = dir + "/" + userid + "_" + index + "_" + strconv.FormatInt(time.Now().Unix(), 10)
+	f, err := os.OpenFile(dir, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		common.Logger.Error(err)
+		result["result"] = "file open fail"
+		return result
+	}
+	defer f.Close()
+	if _, err = io.Copy(f, src); err != nil {
+		result["result"] = err.Error()
+		return result
+	}
+	common.Logger.Printf("file:%s save ok.\n", dir)
+	result["result"] = "ok"
+	result["url"] = dir[2:]
+	return result
+}
+
+//UploadQuestionImage 上传图片
+func UploadQuestionImage(c echo.Context) error {
+
+	//sessionid := c.FormValue("sessionid")
+	index := c.FormValue("index")   //文件索引
+	userid := c.FormValue("userid") //用户名
+	file, err := c.FormFile("file") //文件内容
+	if err != nil {
+		return common.BizError1002
+	}
+	//读取上传文件数据
+	src, err := file.Open()
+	if err != nil {
+		return common.BizError1002
+	}
+	defer src.Close()
+
+	//TODO:用户和会话合法性验证
+
+	result := saveMediaFile("./images", userid, index, src)
+	return common.JSONReturns(c, result)
+}
+
+//UploadQuestionAudio 上传图片
+func UploadQuestionAudio(c echo.Context) error {
+
+	//sessionid := c.FormValue("sessionid")
+	index := c.FormValue("index")   //文件索引
+	userid := c.FormValue("userid") //用户名
+	file, err := c.FormFile("file") //文件内容
+	if err != nil {
+		return common.BizError1002
+	}
+	//读取上传文件数据
+	src, err := file.Open()
+	if err != nil {
+		return common.BizError1002
+	}
+	defer src.Close()
+
+	//TODO:用户和会话合法性验证
+
+	result := saveMediaFile("./audio", userid, index, src)
+	return common.JSONReturns(c, result)
 }

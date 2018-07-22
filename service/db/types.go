@@ -39,21 +39,16 @@ type ProblemInfo struct {
 // AppendProblemInfo 追加的问题信息
 type AppendProblemInfo struct {
 	Model
-	Num       uint   `gorm:"AUTO_INCREMENT"`
+	UserID    string `gorm:"type:varchar(32)"`
 	Content   string `gorm:"type:text"`
-	ProblemID string `gorm:"type:varchar(32);index:idx_appendpinfo_pid"`
-	IsReply   bool   `gorm:"index"`
-	IsDeleted bool
-	IsClosed  bool
+	ProblemID int    `gorm:"type:varchar(32);index:idx_appendpinfo_pid"`
 }
 
 // AssessProblemInfo 问题评价
 type AssessProblemInfo struct {
 	Model
-	Num           uint   `gorm:"AUTO_INCREMENT"`
 	UserID        string `gorm:"type:varchar(32);index:idx_assesspinfo_userid"`
-	ProblemID     string `gorm:"type:varchar(32);index:idx_assesspinfo_pid"`
-	AssessLevel   string `gorm:"type:text"`
-	AssessTag     string `gorm:"type:text"`
+	ProblemID     int    `gorm:"type:varchar(32);index:idx_assesspinfo_pid"`
+	AssessInfo    string `gorm:"type:text"`
 	AssessContent string `gorm:"type:text"`
 }
