@@ -55,7 +55,6 @@ func QuestionCloseCallback(payload cmn.ChunyuQuestionClosePayload) (err error) {
 
 func createUserSyncToDB(logininfo UserLoginRequest) error {
 	userinfo := &db.UserInfo{}
-
 	dbconn := db.MysqlBegin()
 	defer dbconn.MysqlRollback()
 	dbconn.Model(&db.UserInfo{}).Where("user_id = ?", logininfo.UserID).Find(&userinfo)
@@ -73,6 +72,7 @@ func createUserSyncToDB(logininfo UserLoginRequest) error {
 	dbconn.MysqlCommit()
 	return nil
 }
+
 func userIsSynced(userID string) bool {
 	userinfo := &db.UserInfo{}
 	dbconn := db.MysqlBegin()
@@ -85,6 +85,9 @@ func userIsSynced(userID string) bool {
 func UserLogin(payload cmn.PatientLoginPayload) (*UserLoginReponse, error) {
 	now := time.Now().Unix()
 
+	// if cmn.UserVerify(payload.UserID) == false {
+	// 	return nil, nil
+	// }
 	reqArgs := UserLoginRequest{
 		Partner:  cmn.Config().GetString("chunyu.partner"),
 		Sign:     getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(now, 10), payload.UserID),

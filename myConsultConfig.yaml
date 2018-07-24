@@ -17,3 +17,6 @@ nsq:
   maxInFlight: 100
   lookupsAddress: 127.0.0.1:4161
   debug: true
+common:
+  userVerifyDomain: "http://test.yunbiaowulian.com"
+  debug: true
