@@ -107,7 +107,7 @@ func EchoHTTPErrorHandler(e *echo.Echo) echo.HTTPErrorHandler {
 			msg = he.Message
 		} else if be, ok := err.(*BizError); ok {
 			errcode = be.Code
-			msg = be.TMsg(c)
+			msg = be.Msg + be.Stack
 		} else if e.Debug {
 			msg = err.Error()
 		} else {

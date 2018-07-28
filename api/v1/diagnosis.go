@@ -58,14 +58,12 @@ func PatientLogin(c echo.Context) error {
 		return err
 	}
 
-	if p.Platform == "chunyu" {
-		resp, err := chunyu.UserLogin(p)
-		if err != nil {
-			return common.BizError1002
-		}
-		return common.JSONReturns(c, resp)
+	resp, err := chunyu.UserLogin(p)
+	if err != nil {
+		return common.BizError1002
 	}
-	return nil
+	return common.JSONReturns(c, resp)
+
 }
 
 //FreeProblemCreate :众包问题创建
@@ -156,6 +154,9 @@ func GetClinicDoctors(c echo.Context) error {
 	if err := c.Echo().Validator.Validate(p); err != nil {
 		return err
 	}
+	if p.PerPage == 0 {
+		p.PerPage = 20
+	}
 	doctorlist, err := chunyu.GetClinicDoctors(p)
 	if err != nil {
 		return common.BizError1002
@@ -163,7 +164,7 @@ func GetClinicDoctors(c echo.Context) error {
 	//to be continue...
 	guoyi.GetClinicDoctors()
 
-	return common.JSONReturns(c, doctorlist)
+	return common.JSONReturns(c, doctorlist, p.Page, 0, p.PerPage)
 }
 
 //GetAskHistory :获取指定科室和指定城市的医生列表
@@ -175,11 +176,14 @@ func GetAskHistory(c echo.Context) error {
 	if err := c.Echo().Validator.Validate(p); err != nil {
 		return err
 	}
+	if p.PerPage == 0 {
+		p.PerPage = 20
+	}
 	asklist, err := chunyu.GetAskHistory(p)
 	if err != nil {
 		return common.BizError1002
 	}
-	return common.JSONReturns(c, asklist)
+	return common.JSONReturns(c, asklist, p.Page, 0, p.PerPage)
 }
 
 //GetrecommendedDoctors :获取推荐的医生列表

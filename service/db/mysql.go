@@ -36,19 +36,28 @@ func InitMysql() {
 	// Then you could invoke `*sql.DB`'s functions with it
 	idb.DB().SetMaxIdleConns(cmn.Config().GetInt("mysql.idle"))
 	idb.DB().SetMaxOpenConns(cmn.Config().GetInt("mysql.maxOpen"))
+	idb.Set("gorm:table_options", "ENGINE=InnoDB default CHARSET=utf8 auto_increment=1")
 	idb.LogMode(cmn.Config().GetBool("mysql.debug"))
 
 	if idb.HasTable(&UserInfo{}) == false {
-		idb.CreateTable(&UserInfo{})
+		if err := idb.CreateTable(&UserInfo{}).Error; err != nil {
+			panic(err)
+		}
 	}
 	if idb.HasTable(&ProblemInfo{}) == false {
-		idb.CreateTable(&ProblemInfo{})
+		if err := idb.CreateTable(&ProblemInfo{}).Error; err != nil {
+			panic(err)
+		}
 	}
 	if idb.HasTable(&AppendProblemInfo{}) == false {
-		idb.CreateTable(&AppendProblemInfo{})
+		if err := idb.CreateTable(&AppendProblemInfo{}).Error; err != nil {
+			panic(err)
+		}
 	}
 	if idb.HasTable(&AssessProblemInfo{}) == false {
-		idb.CreateTable(&AssessProblemInfo{})
+		if err := idb.CreateTable(&AssessProblemInfo{}).Error; err != nil {
+			panic(err)
+		}
 	}
 	mysql = idb
 	migrate()

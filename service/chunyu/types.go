@@ -103,8 +103,8 @@ type ClinicDoctorRequest struct {
 	Sign     string `json:"sign"`      //签名 <32	not nil
 	UserID   string `json:"user_id"`   //用户名 <32	not nil	用户唯一标识,合作方定义
 	Atime    int64  `json:"atime"`     //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
-	StartNum uint32 `json:"start_num"` //开始数 <32	not nil	用于支持翻页功能，从0开始计数
-	Count    uint32 `json:"count"`     //每次取的问题数 <32	not nil	最大200
+	StartNum int    `json:"start_num"` //开始数 <32	not nil	用于支持翻页功能，从0开始计数
+	Count    int    `json:"count"`     //每次取的问题数 <32	not nil	最大200
 	Province string `json:"province"`  //省份 <32
 	City     string `json:"city"`      //城市 <32
 }
@@ -115,8 +115,8 @@ type AskHistoryRequest struct {
 	Sign     string `json:"sign"`      //签名 <32	not nil
 	UserID   string `json:"user_id"`   //用户名 <32	not nil	用户唯一标识,合作方定义
 	Atime    int64  `json:"atime"`     //签名时间戳 <64	not nil 	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
-	StartNum uint32 `json:"start_num"` //开始数 <32	not nil	用于支持翻页功能，从0开始计数
-	Count    uint32 `json:"count"`     //每次取的问题数 <32	not nil	最大200
+	StartNum int    `json:"start_num"` //开始数 <32	not nil	用于支持翻页功能，从0开始计数
+	Count    int    `json:"count"`     //每次取的问题数 <32	not nil	最大200
 }
 
 //RecommendedDoctorRequest 春雨推荐医生

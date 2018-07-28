@@ -114,11 +114,13 @@ func UserLogin(payload cmn.PatientLoginPayload) (*UserLoginReponse, error) {
 
 //FreeProblemCreate 创建众包问题
 func FreeProblemCreate(payload cmn.FreeProblemPayload) (*ProblemIDReponse, error) {
+	var ProblemID ProblemIDReponse
 	now := time.Now().Unix()
 
 	if userIsSynced(payload.UserID) == false {
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
-		return nil, err
+		cmn.Logger.Error(err)
+		return &ProblemID, err
 	}
 	content, _ := json.Marshal(payload.Content)
 	reqArgs := FreeProblemCreateRequest{
@@ -130,7 +132,6 @@ func FreeProblemCreate(payload cmn.FreeProblemPayload) (*ProblemIDReponse, error
 		Content:  string(content),
 	}
 
-	var ProblemID ProblemIDReponse
 	_, _, errs := newRequest().Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/server/free_problem/create").
 		Send(reqArgs).
 		EndStruct(&ProblemID)
@@ -160,6 +161,7 @@ func createPaidProblemInfoToDB(req PaidProblemCreateRequest, rep ProblemIDRepons
 	dbconn.MysqlCommit()
 	return nil
 }
+
 func createOrientedProblemInfoToDB(req OrientedProblemCreateRequest, rep ProblemAndDoctorReponse) error {
 	probleminfo := &db.ProblemInfo{}
 	probleminfo.UserID = req.UserID
@@ -184,6 +186,7 @@ func createOrientedProblemInfoToDB(req OrientedProblemCreateRequest, rep Problem
 	dbconn.MysqlCommit()
 	return nil
 }
+
 func updateProblemInfoToDB(userid string, problemid int, item string, value interface{}) error {
 
 	dbconn := db.MysqlBegin()
@@ -199,6 +202,7 @@ func updateProblemInfoToDB(userid string, problemid int, item string, value inte
 	dbconn.MysqlCommit()
 	return nil
 }
+
 func appendProblemInfoToDB(req AppendProblemRequest) error {
 	appendprobleminfo := &db.AppendProblemInfo{}
 	appendprobleminfo.Content = req.Content
@@ -216,6 +220,7 @@ func appendProblemInfoToDB(req AppendProblemRequest) error {
 	dbconn.MysqlCommit()
 	return nil
 }
+
 func assessProblemInfoToDB(req AssessProblemRequest) error {
 	assessprobleminfo := &db.AssessProblemInfo{}
 	assessprobleminfo.AssessContent = req.Content
@@ -238,12 +243,10 @@ func assessProblemInfoToDB(req AssessProblemRequest) error {
 //PaidProblemCreate 创建众包升级问题
 func PaidProblemCreate(payload cmn.PaidProblemPayload) (*ProblemIDReponse, error) {
 	now := time.Now().Unix()
-
 	if userIsSynced(payload.UserID) == false {
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
 		return nil, err
 	}
-
 	content, _ := json.Marshal(payload.Content)
 	reqArgs := PaidProblemCreateRequest{
 		FreeProblemCreateRequest{
