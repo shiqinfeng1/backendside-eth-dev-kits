@@ -460,7 +460,7 @@ func GetProblemDetail(payload cmn.ProblemDetailPayload) (*ProblemDetailReponse, 
 	}
 
 	var problem ProblemDetailReponse
-	_, _, errs := newRequest().Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/server/doctor/detail").
+	_, _, errs := newRequest().Post(cmn.Config().GetString("chunyu.domain") + "/cooperation/server/problem/detail").
 		Send(reqArgs).
 		EndStruct(&problem)
 	if errs != nil {

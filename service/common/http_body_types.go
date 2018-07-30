@@ -85,6 +85,16 @@ func ErrorReturns(c echo.Context, errcode string, msg string) error {
 	return c.JSON(200, returns)
 }
 
+// ErrorReturnsStruct 发生错误的时候的返回值封装
+func ErrorReturnsStruct(c echo.Context, errcode string, msg string) *ReturnBody {
+	returns := &ReturnBody{
+		Errcode: errcode,
+		Msg:     msg,
+		Page:    PageBody{},
+	}
+	return returns
+}
+
 //DoctorInfo 医生信息
 type DoctorInfo struct {
 	ID            string `json:"id" validate:"required"`                 //医生 ID

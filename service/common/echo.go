@@ -105,9 +105,11 @@ func EchoHTTPErrorHandler(e *echo.Echo) echo.HTTPErrorHandler {
 		errcode := ErrorCode9999
 		if he, ok := err.(*echo.HTTPError); ok {
 			msg = he.Message
+			e.Logger.Printf("err is echo.HTTPError. msg=%s", msg)
 		} else if be, ok := err.(*BizError); ok {
 			errcode = be.Code
 			msg = be.Msg + be.Stack
+			e.Logger.Printf("err is echo.BizError. errcode=%s msg=%s", errcode, msg)
 		} else if e.Debug {
 			msg = err.Error()
 		} else {
@@ -122,12 +124,13 @@ func EchoHTTPErrorHandler(e *echo.Echo) echo.HTTPErrorHandler {
 
 		if !c.Response().Committed {
 			if c.Request().Method == echo.HEAD { // Issue #608
-				if err := c.NoContent(code); err != nil {
+				e.Logger.Printf("c.NoContent(code:%v)=%s", code, c.NoContent(code))
+				if err1 := c.NoContent(code); err1 != nil {
 					goto ERROR
 				}
 			} else {
 				// 统一封装返回值
-				if err := c.JSON(code, ErrorReturns(c, errcode, rmsg)); err != nil {
+				if err2 := c.JSON(code, ErrorReturnsStruct(c, errcode, rmsg)); err2 != nil {
 					goto ERROR
 				}
 			}
