@@ -41,14 +41,14 @@ type AppendProblemInfo struct {
 	Model
 	UserID    string `gorm:"type:varchar(32)"`
 	Content   string `gorm:"type:text"`
-	ProblemID int    `gorm:"type:varchar(32);index:idx_appendpinfo_pid"`
+	ProblemID int    `gorm:"index:idx_appendpinfo_pid"`
 }
 
 // AssessProblemInfo 问题评价
 type AssessProblemInfo struct {
 	Model
 	UserID        string `gorm:"type:varchar(32);index:idx_assesspinfo_userid"`
-	ProblemID     int    `gorm:"type:varchar(32);index:idx_assesspinfo_pid"`
+	ProblemID     int    `gorm:"index:idx_assesspinfo_pid"`
 	AssessInfo    string `gorm:"type:text"`
 	AssessContent string `gorm:"type:text"`
 }
