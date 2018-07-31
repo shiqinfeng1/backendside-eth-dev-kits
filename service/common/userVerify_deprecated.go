@@ -3,8 +3,6 @@ package common
 import (
 	"sync"
 	"time"
-
-	"github.com/shiqinfeng1/gorequest"
 )
 
 type uvTimeout struct {
@@ -35,13 +33,6 @@ func init() {
 			}()
 		}
 	}()
-}
-
-func newRequest() *gorequest.SuperAgent {
-	request := gorequest.New()
-	request.SetDebug(Config().GetBool("common.debug"))
-	request.SetLogger(Logger)
-	return request
 }
 
 //UserVerify :验证用户的有效性

@@ -60,7 +60,7 @@ func PatientLogin(c echo.Context) error {
 
 	resp, err := chunyu.UserLogin(p)
 	if err != nil {
-		return common.BizError1002
+		return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 	}
 	return common.JSONReturns(c, resp)
 
@@ -98,7 +98,7 @@ func PaidProblemCreate(c echo.Context) error {
 	if p.Platform == "chunyu" {
 		ProblemID, err := chunyu.PaidProblemCreate(p)
 		if err != nil {
-			return common.BizError1002
+			return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 		}
 		return common.JSONReturns(c, ProblemID)
 	}
@@ -118,7 +118,7 @@ func PaidProblemRefund(c echo.Context) error {
 	if p.Platform == "chunyu" {
 		ProblemID, err := chunyu.PaidProblemRefund(p)
 		if err != nil {
-			return common.BizError1002
+			return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 		}
 		return common.JSONReturns(c, ProblemID)
 	}
@@ -138,7 +138,7 @@ func PaidProblemQueryClinicNo(c echo.Context) error {
 	if p.Platform == "chunyu" {
 		ProblemID, err := chunyu.PaidProblemQueryClinicNo(p)
 		if err != nil {
-			return common.BizError1002
+			return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 		}
 		return common.JSONReturns(c, ProblemID)
 	}
@@ -159,7 +159,7 @@ func GetClinicDoctors(c echo.Context) error {
 	}
 	doctorlist, err := chunyu.GetClinicDoctors(p)
 	if err != nil {
-		return common.BizError1002
+		return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 	}
 	//to be continue...
 	guoyi.GetClinicDoctors()
@@ -181,7 +181,7 @@ func GetAskHistory(c echo.Context) error {
 	}
 	asklist, err := chunyu.GetAskHistory(p)
 	if err != nil {
-		return common.BizError1002
+		return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 	}
 	return common.JSONReturns(c, asklist, p.Page, 0, p.PerPage)
 }
@@ -197,7 +197,7 @@ func GetrecommendedDoctors(c echo.Context) error {
 	}
 	doctorlist, err := chunyu.GetRecommendedDoctors(p)
 	if err != nil {
-		return common.BizError1002
+		return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 	}
 	//to be continue...
 	guoyi.GetClinicDoctors()
@@ -216,7 +216,7 @@ func GetDoctorDetail(c echo.Context) error {
 	}
 	doctorlist, err := chunyu.GetDoctorDetail(p)
 	if err != nil {
-		return common.BizError1002
+		return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 	}
 	//to be continue...
 	guoyi.GetClinicDoctors()
@@ -235,7 +235,7 @@ func GetProblemDetail(c echo.Context) error {
 	}
 	doctorlist, err := chunyu.GetProblemDetail(p)
 	if err != nil {
-		return common.BizError1002
+		return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 	}
 	if doctorlist.Error > 0 {
 		return common.JSONReturns(c, &chunyu.ErrorMsgReponse{Error: doctorlist.Error, ErrorMsg: doctorlist.ErrorMsg})
@@ -255,7 +255,7 @@ func OrientedProblemCreate(c echo.Context) error {
 	if p.Platform == "chunyu" {
 		ProblemID, err := chunyu.OrientedProblemCreate(p)
 		if err != nil {
-			return common.BizError1002
+			return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 		}
 		return common.JSONReturns(c, ProblemID)
 	}
@@ -279,7 +279,7 @@ func GetEmergencyGraph(c echo.Context) error {
 	}
 	doctorlist, err := chunyu.GetEmergencyGraph(p)
 	if err != nil {
-		return common.BizError1002
+		return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 	}
 	//to be continue...
 	guoyi.GetClinicDoctors()
@@ -299,7 +299,7 @@ func EmergencyGraphCreate(c echo.Context) error {
 	if p.Platform == "chunyu" {
 		ProblemID, err := chunyu.EmergencyGraphCreate(p)
 		if err != nil {
-			return common.BizError1002
+			return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 		}
 		return common.JSONReturns(c, ProblemID)
 	}
@@ -319,7 +319,7 @@ func GetFastPhoneInfo(c echo.Context) error {
 	if p.Platform == "chunyu" {
 		ProblemID, err := chunyu.GetFastPhoneInfo(p)
 		if err != nil {
-			return common.BizError1002
+			return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 		}
 		return common.JSONReturns(c, ProblemID)
 	}
@@ -339,7 +339,7 @@ func FastPhoneOrderCreate(c echo.Context) error {
 	if p.Platform == "chunyu" {
 		ProblemID, err := chunyu.FastPhoneOrderCreate(p)
 		if err != nil {
-			return common.BizError1002
+			return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 		}
 		return common.JSONReturns(c, ProblemID)
 	}
@@ -359,7 +359,7 @@ func ProblemAppend(c echo.Context) error {
 	if p.Platform == "chunyu" {
 		ProblemID, err := chunyu.AppendProblem(p)
 		if err != nil {
-			return common.BizError1002
+			return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 		}
 		return common.JSONReturns(c, ProblemID)
 	}
@@ -379,7 +379,7 @@ func ProblemAssess(c echo.Context) error {
 	if p.Platform == "chunyu" {
 		ProblemID, err := chunyu.AssessProblem(p)
 		if err != nil {
-			return common.BizError1002
+			return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 		}
 		return common.JSONReturns(c, ProblemID)
 	}
@@ -399,7 +399,7 @@ func ProblemDelete(c echo.Context) error {
 	if p.Platform == "chunyu" {
 		ProblemID, err := chunyu.DeleteProblem(p, "is_deleted")
 		if err != nil {
-			return common.BizError1002
+			return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 		}
 		return common.JSONReturns(c, ProblemID)
 	}
@@ -418,7 +418,7 @@ func ProblemClose(c echo.Context) error {
 	if p.Platform == "chunyu" {
 		ProblemID, err := chunyu.DeleteProblem(p, "is_closed")
 		if err != nil {
-			return common.BizError1002
+			return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 		}
 		return common.JSONReturns(c, ProblemID)
 	}
@@ -508,12 +508,12 @@ func UploadQuestionImage(c echo.Context) error {
 	userid := c.FormValue("userid") //用户名
 	file, err := c.FormFile("file") //文件内容
 	if err != nil {
-		return common.BizError1002
+		return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 	}
 	//读取上传文件数据
 	src, err := file.Open()
 	if err != nil {
-		return common.BizError1002
+		return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 	}
 	defer src.Close()
 
@@ -531,12 +531,12 @@ func UploadQuestionAudio(c echo.Context) error {
 	userid := c.FormValue("userid") //用户名
 	file, err := c.FormFile("file") //文件内容
 	if err != nil {
-		return common.BizError1002
+		return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 	}
 	//读取上传文件数据
 	src, err := file.Open()
 	if err != nil {
-		return common.BizError1002
+		return common.ErrorReturns(c, common.ErrorCode1, err.Error())
 	}
 	defer src.Close()
 

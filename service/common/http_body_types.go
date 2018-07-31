@@ -80,7 +80,6 @@ func ErrorReturns(c echo.Context, errcode string, msg string) error {
 	returns := &ReturnBody{
 		Errcode: errcode,
 		Msg:     msg,
-		Page:    PageBody{},
 	}
 	return c.JSON(200, returns)
 }

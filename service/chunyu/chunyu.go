@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -85,9 +86,9 @@ func userIsSynced(userID string) bool {
 func UserLogin(payload cmn.PatientLoginPayload) (*UserLoginReponse, error) {
 	now := time.Now().Unix()
 
-	// if cmn.UserVerify(payload.UserID) == false {
-	// 	return nil, nil
-	// }
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	reqArgs := UserLoginRequest{
 		Partner:  cmn.Config().GetString("chunyu.partner"),
 		Sign:     getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(now, 10), payload.UserID),
@@ -117,6 +118,9 @@ func FreeProblemCreate(payload cmn.FreeProblemPayload) (*ProblemIDReponse, error
 	var ProblemID ProblemIDReponse
 	now := time.Now().Unix()
 
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	if userIsSynced(payload.UserID) == false {
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
 		cmn.Logger.Error(err)
@@ -243,6 +247,10 @@ func assessProblemInfoToDB(req AssessProblemRequest) error {
 //PaidProblemCreate 创建众包升级问题
 func PaidProblemCreate(payload cmn.PaidProblemPayload) (*ProblemIDReponse, error) {
 	now := time.Now().Unix()
+
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	if userIsSynced(payload.UserID) == false {
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
 		return nil, err
@@ -277,6 +285,9 @@ func PaidProblemCreate(payload cmn.PaidProblemPayload) (*ProblemIDReponse, error
 func PaidProblemRefund(payload cmn.PaidProblemRefundPayload) (*ErrorMsgReponse, error) {
 	now := time.Now().Unix()
 
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	reqArgs := PaidProblemRefundRequest{
 		ProblemID: payload.ProblemID,
 		Partner:   cmn.Config().GetString("chunyu.partner"),
@@ -300,6 +311,9 @@ func PaidProblemRefund(payload cmn.PaidProblemRefundPayload) (*ErrorMsgReponse, 
 func PaidProblemQueryClinicNo(payload cmn.PaidProblemQueryClinicNoPayload) (*ClinicNoReponse, error) {
 	now := time.Now().Unix()
 
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	if userIsSynced(payload.UserID) == false {
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
 		return nil, err
@@ -329,6 +343,9 @@ func PaidProblemQueryClinicNo(payload cmn.PaidProblemQueryClinicNoPayload) (*Cli
 func GetClinicDoctors(payload cmn.ClinicDoctorsPayload) (*ClinicDoctorReponse, error) {
 	now := time.Now().Unix()
 
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	reqArgs := ClinicDoctorRequest{
 		ClinicNo: payload.ClinicNo,
 		Partner:  cmn.Config().GetString("chunyu.partner"),
@@ -356,6 +373,9 @@ func GetClinicDoctors(payload cmn.ClinicDoctorsPayload) (*ClinicDoctorReponse, e
 func GetAskHistory(payload cmn.AskHistoryPayload) (*[]AskHistoryReponse, error) {
 	now := time.Now().Unix()
 
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	if userIsSynced(payload.UserID) == false {
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
 		return nil, err
@@ -387,6 +407,9 @@ func GetAskHistory(payload cmn.AskHistoryPayload) (*[]AskHistoryReponse, error) 
 func GetRecommendedDoctors(payload cmn.RecommendedDoctorsPayload) (*ClinicDoctorReponse, error) {
 	now := time.Now().Unix()
 
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	if userIsSynced(payload.UserID) == false {
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
 		return nil, err
@@ -416,6 +439,9 @@ func GetRecommendedDoctors(payload cmn.RecommendedDoctorsPayload) (*ClinicDoctor
 func GetDoctorDetail(payload cmn.DoctorDetailPayload) (*DoctorDetailReponse, error) {
 	now := time.Now().Unix()
 
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	if userIsSynced(payload.UserID) == false {
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
 		return nil, err
@@ -445,6 +471,9 @@ func GetDoctorDetail(payload cmn.DoctorDetailPayload) (*DoctorDetailReponse, err
 func GetProblemDetail(payload cmn.ProblemDetailPayload) (*ProblemDetailReponse, error) {
 	now := time.Now().Unix()
 
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	if userIsSynced(payload.UserID) == false {
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
 		return nil, err
@@ -474,6 +503,9 @@ func GetProblemDetail(payload cmn.ProblemDetailPayload) (*ProblemDetailReponse, 
 func OrientedProblemCreate(payload cmn.OrientedProblemPayload) (*ProblemAndDoctorReponse, error) {
 	now := time.Now().Unix()
 
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	if userIsSynced(payload.UserID) == false {
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
 		return nil, err
@@ -508,6 +540,9 @@ func OrientedProblemCreate(payload cmn.OrientedProblemPayload) (*ProblemAndDocto
 func GetEmergencyGraph(payload cmn.EmergencyGraphPayload) (*EmergencyGraphReponse, error) {
 	now := time.Now().Unix()
 
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	if userIsSynced(payload.UserID) == false {
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
 		return nil, err
@@ -537,6 +572,9 @@ func GetEmergencyGraph(payload cmn.EmergencyGraphPayload) (*EmergencyGraphRepons
 func EmergencyGraphCreate(payload cmn.EmergencyGraphCreatePayload) (*ProblemIDReponse, error) {
 	now := time.Now().Unix()
 
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	if userIsSynced(payload.UserID) == false {
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
 		return nil, err
@@ -571,6 +609,9 @@ func EmergencyGraphCreate(payload cmn.EmergencyGraphCreatePayload) (*ProblemIDRe
 func GetFastPhoneInfo(payload cmn.FastPhoneInfoPayload) (*FastPhoneInfoReponse, error) {
 	now := time.Now().Unix()
 
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	if userIsSynced(payload.UserID) == false {
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
 		return nil, err
@@ -598,6 +639,9 @@ func GetFastPhoneInfo(payload cmn.FastPhoneInfoPayload) (*FastPhoneInfoReponse, 
 func FastPhoneOrderCreate(payload cmn.FastPhoneOrderCreatePayload) (*FastPhoneOrderReponse, error) {
 	now := time.Now().Unix()
 
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	if userIsSynced(payload.UserID) == false {
 		err := fmt.Errorf("user: %s is not login", payload.UserID)
 		return nil, err
@@ -626,6 +670,9 @@ func FastPhoneOrderCreate(payload cmn.FastPhoneOrderCreatePayload) (*FastPhoneOr
 
 //AppendProblem 追加问题
 func AppendProblem(payload cmn.AppendProblemPayload) (*ErrorMsgReponse, error) {
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	now := time.Now().Unix()
 	content, _ := json.Marshal(payload.Content)
 	reqArgs := AppendProblemRequest{
@@ -651,8 +698,10 @@ func AppendProblem(payload cmn.AppendProblemPayload) (*ErrorMsgReponse, error) {
 
 //AssessProblem 评价问题
 func AssessProblem(payload cmn.AssessProblemPayload) (*ErrorMsgReponse, error) {
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	now := time.Now().Unix()
-
 	content, _ := json.Marshal(payload.Content)
 	assess, _ := json.Marshal(payload.AssessInfo)
 	reqArgs := AssessProblemRequest{
@@ -679,8 +728,10 @@ func AssessProblem(payload cmn.AssessProblemPayload) (*ErrorMsgReponse, error) {
 
 //DeleteProblem 删除问题
 func DeleteProblem(payload cmn.DeleteProblemPayload, flag string) (*ErrorMsgReponse, error) {
+	if cmn.UserAuth(payload.Token) == false {
+		return nil, errors.New("token auth failed")
+	}
 	now := time.Now().Unix()
-
 	reqArgs := DeleteProblemRequest{
 		ProblemID: payload.ProblemID,
 		UserID:    payload.UserID,
