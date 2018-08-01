@@ -44,12 +44,19 @@ func DoctorResponseCallback(payload cmn.ChunyuDoctorResponsePayload) (err error)
 			return
 		}
 	*/
+	cmn.Logger.Debug("DoctorResponseCallback MSG: ", payload)
 	err = nsqs.PostTopic(cmn.TopicChunyuDoctorResponse, payload)
 	return
 }
 
 //QuestionCloseCallback 问题关闭回调
 func QuestionCloseCallback(payload cmn.ChunyuQuestionClosePayload) (err error) {
+	/*
+		if payload.Sign != getSign(cmn.Config().GetString("chunyu.partnerKey"), strconv.FormatInt(payload.Atime, 10), strconv.Itoa(payload.ProblemID)) {
+			return
+		}
+	*/
+	cmn.Logger.Debug("QuestionCloseCallback MSG: ", payload)
 	err = nsqs.PostTopic(cmn.TopicChunyuQuestionClose, payload)
 	return
 }
