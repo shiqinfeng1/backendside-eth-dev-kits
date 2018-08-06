@@ -1,0 +1,24 @@
+useViper: true
+httpSrvPort: 8080
+debugLevel: debug  #DEBUG INFO WARN ERROR OFF
+mysql:
+  URL: root:11111111@tcp(localhost:3306)
+  dbName: myconsult
+  idle: 256
+  maxOpen: 1024
+  debug: true
+nsq:
+  nodeAddress: 127.0.0.1:4151
+  maxInFlight: 100
+  lookupsAddress: 127.0.0.1:4161
+  debug: true
+common:
+  debug: true
+ethereum:
+  endpoints: http://18.222.179.249:21024
+  debug: true
+poa:
+  endpoints: http://18.222.179.249:21024
+  debug: true
+soliditySource:
+- TokenTimelock

@@ -1,7 +1,7 @@
 package common
 
 import (
-	"github.com/shiqinfeng1/chunyuyisheng/locale"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/locale"
 
 	"github.com/labstack/echo"
 	"github.com/nicksnyder/go-i18n/i18n"

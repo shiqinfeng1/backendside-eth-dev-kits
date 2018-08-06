@@ -3,29 +3,37 @@ package command
 import (
 	"github.com/labstack/gommon/log"
 
-	"github.com/shiqinfeng1/chunyuyisheng/service/db"
-	"github.com/shiqinfeng1/chunyuyisheng/service/nsqs"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/db"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/eth"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/nsqs"
 
-	"github.com/shiqinfeng1/chunyuyisheng/api/v1"
-	"github.com/shiqinfeng1/chunyuyisheng/service/common"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/api/v1"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 	"github.com/spf13/cobra"
 )
 
-var diagCmd = &cobra.Command{
-	Use:   "consult",
-	Short: "start a consult backend service",
+var daemonCmd = &cobra.Command{
+	Use:   "daemon",
+	Short: "start a daemon backend service",
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		common.Logger = log.New("consult")
+		common.Logger = log.New("daemon")
 		db.InitMysql()
 		if err := nsqs.InitConfig(); err != nil {
 			return err
 		}
 		nsqs.Start()
+		if err := eth.AttachEthNode(); err != nil {
+			return err
+		}
+		if err := eth.CompileSolidity(); err != nil {
+			return err
+		}
+
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		httpServer := common.InitHTTPService()
-		v1.RegisterDiagAPI(httpServer)
+		v1.RegisterDevKitsAPI(httpServer)
 		common.RunHTTPService(httpServer)
 		return
 	},

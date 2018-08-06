@@ -4,25 +4,23 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/shiqinfeng1/chunyuyisheng/cmd/command"
-	cmn "github.com/shiqinfeng1/chunyuyisheng/service/common"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/cmd/command"
+	cmn "github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 	"github.com/spf13/cobra"
 )
 
 var cfgFile string
 
 var rootCmd = &cobra.Command{
-	Use:   "{ARCH}_myconsult",
-	Short: "the consultation platform",
-	Long:  `'春雨医生' 和 '国医链' 的问诊对接平台 `,
+	Use:   "{ARCH}_ethsmart",
+	Short: "backendside ethereum develop kits",
+	Long:  `和以太坊交互的后端服务 `,
 }
 
 func init() {
 	cobra.OnInitialize(initConfig)
 	//Persistent类型的参数表示在子命令种也有效， 相当于全局参数。对应的，设置本地参数的方法是：Flags()
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is ./myConsultConfig.yaml $HOME/myConsultConfig.yaml)")
-
-	//rootCmd.MarkFlagRequired("config")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is ./myConfig.yaml or $HOME/myConfig.yaml)")
 
 }
 

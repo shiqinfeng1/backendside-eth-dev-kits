@@ -10,7 +10,7 @@ import (
 
 	"github.com/labstack/gommon/color"
 	nsq "github.com/nsqio/go-nsq"
-	cmn "github.com/shiqinfeng1/chunyuyisheng/service/common"
+	cmn "github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 )
 
 // NsqStopable which has Stop() method for grancful stop, eg: nsq consumer/producer

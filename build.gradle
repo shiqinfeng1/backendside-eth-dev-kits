@@ -3,23 +3,47 @@ plugins {
 }
 
 golang {
-    packagePath = 'github.com/shiqinfeng1/chunyuyisheng' //github上的项目路径
+    packagePath = 'github.com/shiqinfeng1/backendside-eth-dev-kits' //github上的项目路径
+    fuckGfw = true
 }
 //构建
 build {
-    resolveBuildDependencies.enabled = false  //构建时不再进行依赖检查
-    installDependencies.enabled = false   //构建时不再进行依赖检查
+    //resolveBuildDependencies.enabled = false  //构建时不再进行依赖检查
+    //installDependencies.enabled = false   //构建时不再进行依赖检查
     // 交叉编译的输出选项，注意，要求go 1.5+
-    targetPlatform = ['linux-amd64','darwin-amd64'] //'windows-amd64',,  'linux-386'
-    
-    // 输出文件的路径，可以是绝对路径（相对于项目目录）或者相对路径
-    // 其中的${}占位符会在交叉编译时被渲染
-    //outputLocation = './.gogradle/${GOOS}_${GOARCH}_${PROJECT_NAME}${GOEXE}' //
-    go 'build -o ./build/bin/${GOOS}_${GOARCH}_myconsult${GOEXE} github.com/shiqinfeng1/chunyuyisheng/cmd'
+    targetPlatform = ['linux-amd64'] //'windows-amd64','linux-386' 'darwin-amd64',
+    environment CGO_ENABLED: "1"
+    environment CC: "x86_64-linux-musl-gcc"
+    go 'build -o ./build/bin/${GOOS}_${GOARCH}_ethsmart${GOEXE} github.com/shiqinfeng1/backendside-eth-dev-kits/cmd'
+}
+task build_mac(type: com.github.blindpirate.gogradle.Go) {
+    dependsOn vendor // 令此任务依赖vendor任务，这样才能保证任务执行时所有依赖包都已经被安装到了vendor中
+    run 'go build -o ./build/bin/${GOOS}_${GOARCH}_ethsmart${GOEXE} github.com/shiqinfeng1/backendside-eth-dev-kits/cmd' // 指定任务中运行的命令
+}
+build.dependsOn build_mac
+
+repositories {
+    golang {
+         root 'golang.org/x/crypto' 
+         url 'https://github.com/golang/crypto.git'
+    }
+    golang {
+         root 'golang.org/x/sys'
+         url 'https://github.com/golang/sys.git'
+    }
+    golang {
+         root 'golang.org/x/net'
+         url 'https://github.com/golang/net.git'
+    }
+    golang {
+         root 'golang.org/x/text'
+         url 'https://github.com/golang/text.git'
+    }
 }
 
 dependencies {
     golang {
+        build(['name':'github.com/ethereum/go-ethereum'])
         build(['name':'github.com/fsnotify/fsnotify'])
         build(['name':'github.com/jinzhu/gorm'])
         build(['name':'github.com/labstack/echo'])

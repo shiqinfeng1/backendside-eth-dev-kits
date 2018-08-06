@@ -6,6 +6,5 @@ import (
 
 //AddCommands :注册命令行命令
 func AddCommands(root *cobra.Command) {
-	root.AddCommand(diagCmd)
-	root.AddCommand(msgPusherCmd)
+	root.AddCommand(daemonCmd)
 }

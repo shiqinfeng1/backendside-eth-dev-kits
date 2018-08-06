@@ -5,7 +5,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql" // mysql driver
-	cmn "github.com/shiqinfeng1/chunyuyisheng/service/common"
+	cmn "github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 )
 
 // DB gorm数据库实例
