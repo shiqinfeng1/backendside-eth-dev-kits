@@ -30,7 +30,7 @@ func InitConfig(cfgFile string) {
 		// Search config in home directory with name ".cobra" (without extension).
 		cfgData.AddConfigPath(".")
 		cfgData.AddConfigPath(home)
-		cfgData.SetConfigName("myConsultConfig")
+		cfgData.SetConfigName("myConfig")
 	}
 	cfgData.AutomaticEnv()
 	if err := cfgData.ReadInConfig(); err != nil {

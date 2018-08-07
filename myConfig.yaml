@@ -21,4 +21,5 @@ poa:
   endpoints: http://18.222.179.249:21024
   debug: true
 soliditySource:
-- TokenTimelock
+- ERC20/TokenTimelock
+- ERC20/TokenVesting
