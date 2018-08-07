@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/rpc"
-	"gitlab.chainresearch.org/wallet/stone/common"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 )
 
 type endpoint struct {
+	nodeType       string
 	weight         int
 	url            string
 	isOk           bool
@@ -25,7 +26,10 @@ func (e *endpoint) rpc(result interface{}, method string, args ...interface{}) e
 	}
 	err = client.Call(result, method, args...)
 	if err != nil {
-		common.Logger.Error(err)
+		// fmt.Println("---------------------------------")
+		// fmt.Printf("RPC to NODE:%s fail. method = %s\n\n", e.url, method)
+		// fmt.Print(err)
+		// fmt.Println("---------------------------------")
 		return err
 	}
 	return nil
@@ -35,7 +39,7 @@ func (e *endpoint) heartbeat() bool {
 	var res string
 	err := e.rpc(&res, "net_version")
 	if err != nil {
-		common.Logger.Info("heartbeat error: ", e.url)
+		//common.Logger.Error(e.url, "  heartbeat error: connect fail.")
 		return false
 	}
 	return true
@@ -43,11 +47,11 @@ func (e *endpoint) heartbeat() bool {
 
 // EndpointsManager endpoints of ethereum
 type EndpointsManager struct {
-	endpoints       []*endpoint
-	rAliveEndpoints []*endpoint
-	rwMutex         sync.RWMutex
-	exit            chan bool
-	closed          chan bool
+	endpoints      []*endpoint
+	AliveEndpoints []*endpoint
+	rwMutex        sync.RWMutex
+	exit           chan bool
+	closed         chan bool
 }
 
 var endPoints *EndpointsManager
@@ -55,10 +59,10 @@ var endPoints *EndpointsManager
 // NewEndPointsManager create a endPoint manager
 func NewEndPointsManager() *EndpointsManager {
 	endPoints = &EndpointsManager{
-		endpoints:       []*endpoint{},
-		rAliveEndpoints: []*endpoint{},
-		exit:            make(chan bool),
-		closed:          make(chan bool),
+		endpoints:      []*endpoint{},
+		AliveEndpoints: []*endpoint{},
+		exit:           make(chan bool),
+		closed:         make(chan bool),
 	}
 	return endPoints
 }
@@ -68,23 +72,41 @@ func GetEndPointsManager() *EndpointsManager {
 	return endPoints
 }
 
-//AddEndPoint 增加监听节点
-func (e *EndpointsManager) AddEndPoint(endpointURL string, weight int, interval int) {
+func (e *EndpointsManager) updateEndPoint() {
 	e.rwMutex.Lock()
 	defer e.rwMutex.Unlock()
-	endpoint := &endpoint{
-		url:      endpointURL,
-		weight:   weight,
-		interval: interval,
+	var endpoints []*endpoint
+	endpointURLs := common.Config().GetStringSlice("ethereum.endpoints")
+
+	for _, endpointURL := range endpointURLs {
+		endpoint := &endpoint{
+			nodeType: "ethereum",
+			url:      endpointURL,
+			weight:   1,
+			interval: 0,
+		}
+		endpoints = append(endpoints, endpoint)
 	}
-	e.endpoints = append(e.endpoints, endpoint)
-	e.rAliveEndpoints = append(e.rAliveEndpoints, endpoint)
+	endpointURLs = common.Config().GetStringSlice("poa.endpoints")
+	for _, endpointURL := range endpointURLs {
+		endpoint := &endpoint{
+			nodeType: "poa",
+			url:      endpointURL,
+			weight:   1,
+			interval: 0,
+		}
+		endpoints = append(endpoints, endpoint)
+	}
+
+	e.endpoints = endpoints
 }
 
 // Run endpoints run, monitor alive Endpoint
 func (e *EndpointsManager) Run() {
 	ticker := time.NewTicker(time.Second * 5)
 	defer ticker.Stop()
+
+	e.updateEndPoint()
 	for {
 		select {
 		case <-ticker.C:
@@ -106,10 +128,8 @@ func (e *EndpointsManager) Stop() {
 
 func (e *EndpointsManager) watchAliveEndpoint() error {
 	for _, item := range e.endpoints {
-		common.Logger.Infof("endpoint %s, interval: %d, intervalAmount: %d", item.url, item.interval, item.intervalAmount)
 		if item.intervalAmount == 0 {
 			item.isOk = item.heartbeat()
-			common.Logger.Infof("endpoint watch: %s, status: %t", item.url, item.isOk)
 		}
 		item.intervalAmount++
 		if item.intervalAmount >= item.interval {
@@ -117,8 +137,7 @@ func (e *EndpointsManager) watchAliveEndpoint() error {
 		}
 	}
 	e.updateAliveEndpoint()
-
-	common.Logger.Info("endpoint watch size: ", len(e.rAliveEndpoints))
+	e.updateEndPoint()
 	return nil
 }
 
@@ -129,16 +148,21 @@ func (e *EndpointsManager) updateAliveEndpoint() {
 	for _, item := range e.endpoints {
 		if item.isOk {
 			res = append(res, item)
+		} else {
+			common.Logger.Error(item.url, ": Not In Service!!!")
 		}
 	}
-	e.rAliveEndpoints = res
+	e.AliveEndpoints = res
+	if len(e.AliveEndpoints) == 0 {
+		common.Logger.Error("No Node In Service!!!")
+	}
 }
 
 // RPC rpc
 func (e *EndpointsManager) RPC(result interface{}, method string, args ...interface{}) (err error) {
 	e.rwMutex.RLock()
 	defer e.rwMutex.RUnlock()
-	for _, item := range e.rAliveEndpoints {
+	for _, item := range e.AliveEndpoints {
 		err = item.rpc(result, method, args...)
 		if _, ok := err.(*url.Error); ok {
 			continue

@@ -12,12 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-// EthConn 一个ethnode的连接
-var EthConn *ethclient.Client
-
-// PoAConn 一个ethnode的连接
-var PoAConn *ethclient.Client
-
 // 获取路径
 func getCurrPath() string {
 	file, _ := exec.LookPath(os.Args[0])
@@ -37,28 +31,24 @@ func checkFileIsExist(filename string) bool {
 	return exist
 }
 
-//AttachEthNode 连接以太坊节点
-func AttachEthNode() error {
-	con1, err := ethclient.Dial(cmn.Config().GetString("ethereum.endpoints")) //也可以是https地址,websocket地址
-	if err != nil {
-		cmn.Logger.Fatalf("Failed to connect to the Ethereum client: %v", err)
-		return err
+//ConnectEthNode 连接以太坊节点
+func ConnectEthNode(nodeType string) *ethclient.Client {
+	for _, endpoint := range GetEndPointsManager().AliveEndpoints {
+		if nodeType == endpoint.nodeType {
+			con1, err := ethclient.Dial(endpoint.url) //也可以是https地址,websocket地址
+			if err != nil {
+				continue
+			}
+			return con1
+		}
 	}
-	EthConn = con1
-
-	con2, err := ethclient.Dial(cmn.Config().GetString("poa.endpoints")) //也可以是https地址,websocket地址
-	if err != nil {
-		cmn.Logger.Fatalf("Failed to connect to the PoA client: %v", err)
-		return err
-	}
-	PoAConn = con2
-	return err
+	return nil
 }
 
 //CompileSolidity 编译智能合约
 func CompileSolidity() error {
 
-	for _, solcFile := range cmn.Config().GetStringSlice("soliditySource") {
+	for _, solcFile := range cmn.Config().GetStringSlice("solidity.source") {
 		fmt.Printf("get solcFile: %v ", solcFile)
 		path := strings.Split(solcFile, string(os.PathSeparator))
 		path = path[:len(path)-1]
@@ -77,21 +67,21 @@ func CompileSolidity() error {
 			"./abigen",
 			"-sol=./contracts/"+solcFile+".sol",
 			"-pkg=contracts",
-			"-exc=ERC20,ERC20Basic,SafeERC20,SafeMath,Ownable",
+			"-exc="+cmn.Config().GetString("solidity.exclude"),
 			"-out=./service/contracts/"+solcFile+".go") // 实际可以直接写成-alh
 		b, err := cmd.CombinedOutput()
 		if err != nil {
-			fmt.Println("\n*****Compile solidity fail********************")
+			fmt.Println("\n\n*****Compile solidity fail********************")
 			fmt.Println("output:", string(b))
-			fmt.Println(err)
+			fmt.Print(err)
 			fmt.Printf("**************************************************\n\n")
 			return err
 		}
 		if b != nil && len(b) == 0 {
 			cmn.Logger.Printf("compile solidity %s ok.", solcFile)
 		} else {
-			fmt.Println("\n*****Compile solidity output********************")
-			fmt.Println(string(b))
+			fmt.Println("\n\n*****Compile solidity output********************")
+			fmt.Print(string(b))
 			fmt.Printf("**************************************************\n\n")
 		}
 	}

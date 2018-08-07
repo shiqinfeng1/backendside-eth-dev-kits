@@ -23,16 +23,10 @@ var daemonCmd = &cobra.Command{
 			return err
 		}
 		nsqs.Start()
-		if err := eth.AttachEthNode(); err != nil {
-			return err
-		}
 		if err := eth.CompileSolidity(); err != nil {
 			return err
 		}
-		endpointsManager := eth.NewEndPointsManager()
-		endpointsManager.AddEndPoint(common.Config().GetString("ethereum.endpoints"), 1, 0)
-		go endpointsManager.Run()
-
+		go eth.NewEndPointsManager().Run()
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {

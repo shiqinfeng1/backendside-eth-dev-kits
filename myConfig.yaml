@@ -15,11 +15,18 @@ nsq:
 common:
   debug: true
 ethereum:
-  endpoints: http://18.222.179.249:21024
+  endpoints: 
+    - http://18.222.179.249:21024
+    - http://18.222.179.249:21024
   debug: true
 poa:
-  endpoints: http://18.222.179.249:21024
+  endpoints: 
+    - http://18.222.179.249:21024
+    - http://18.222.179.249:21024
   debug: true
-soliditySource:
-- ERC20/TokenTimelock
-- ERC20/TokenVesting
+solidity:
+  source:
+    - ERC20/TokenTimelock
+    - ERC20/TokenVesting
+  exclude:
+    ERC20,ERC20Basic,SafeERC20,SafeMath,Ownable
