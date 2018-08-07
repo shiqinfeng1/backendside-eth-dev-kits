@@ -6,6 +6,7 @@ import (
 
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/cmd/command"
 	cmn "github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/httpservice"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +34,7 @@ func main() {
 	command.AddCommands(rootCmd)
 
 	if err := rootCmd.Execute(); err != nil {
-		if sterr, ok := err.(cmn.StatusError); ok {
+		if sterr, ok := err.(httpservice.StatusError); ok {
 			if sterr.Status != "" {
 				fmt.Println(sterr.Error())
 			}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/db"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/eth"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/httpservice"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/nsqs"
 
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/api/v1"
@@ -28,12 +29,16 @@ var daemonCmd = &cobra.Command{
 		if err := eth.CompileSolidity(); err != nil {
 			return err
 		}
+		endpointsManager := eth.NewEndPointsManager()
+		endpointsManager.AddEndPoint(common.Config().GetString("ethereum.endpoints"), 1, 0)
+		go endpointsManager.Run()
+
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		httpServer := common.InitHTTPService()
+		httpServer := httpservice.InitHTTPService()
 		v1.RegisterDevKitsAPI(httpServer)
-		common.RunHTTPService(httpServer)
+		httpservice.RunHTTPService(httpServer)
 		return
 	},
 }

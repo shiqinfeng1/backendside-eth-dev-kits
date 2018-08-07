@@ -18,13 +18,23 @@ var EthConn *ethclient.Client
 // PoAConn 一个ethnode的连接
 var PoAConn *ethclient.Client
 
-//GetCurrPath 获取路径
-func GetCurrPath() string {
+// 获取路径
+func getCurrPath() string {
 	file, _ := exec.LookPath(os.Args[0])
 	path, _ := filepath.Abs(file)
 	index := strings.LastIndex(path, string(os.PathSeparator))
 	ret := path[:(index - len("build/bin/"))]
 	return ret
+}
+
+//检查目录是否存在
+func checkFileIsExist(filename string) bool {
+	var exist = true
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		fmt.Print(filename + " not exist\n")
+		exist = false
+	}
+	return exist
 }
 
 //AttachEthNode 连接以太坊节点
@@ -47,14 +57,28 @@ func AttachEthNode() error {
 
 //CompileSolidity 编译智能合约
 func CompileSolidity() error {
+
 	for _, solcFile := range cmn.Config().GetStringSlice("soliditySource") {
-		cmn.Logger.Printf("get solcFile: %v ", solcFile)
+		fmt.Printf("get solcFile: %v ", solcFile)
+		path := strings.Split(solcFile, string(os.PathSeparator))
+		path = path[:len(path)-1]
+		dir := "./service/contracts"
+		for _, name := range path {
+			dir = dir + "/" + name
+			if !checkFileIsExist(dir) {
+				err := os.Mkdir(dir, os.ModePerm) //创建文件夹
+				if err != nil {
+					cmn.Logger.Error(err)
+					return err
+				}
+			}
+		}
 		cmd := exec.Command(
 			"./abigen",
 			"-sol=./contracts/"+solcFile+".sol",
 			"-pkg=contracts",
 			"-exc=ERC20,ERC20Basic,SafeERC20,SafeMath,Ownable",
-			"-out=./service/contracts/"+solcFile[strings.LastIndex(solcFile, string(os.PathSeparator))+1:]+".go") // 实际可以直接写成-alh
+			"-out=./service/contracts/"+solcFile+".go") // 实际可以直接写成-alh
 		b, err := cmd.CombinedOutput()
 		if err != nil {
 			fmt.Println("\n*****Compile solidity fail********************")
