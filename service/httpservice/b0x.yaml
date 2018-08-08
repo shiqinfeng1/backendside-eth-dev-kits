@@ -2,7 +2,7 @@
 # where fileb0x was run at!
 
 # default: main
-pkg: locale
+pkg: httpservice
 
 # destination
 dest: "./"
