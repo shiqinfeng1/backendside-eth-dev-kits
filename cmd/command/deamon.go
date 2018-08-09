@@ -7,6 +7,7 @@ import (
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/eth"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/httpservice"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/nsqs"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
 
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/api/v1"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
@@ -27,6 +28,7 @@ var daemonCmd = &cobra.Command{
 			return err
 		}
 		go eth.NewEndPointsManager().Run()
+		accounts.NewRootHDWallet()
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {

@@ -30,3 +30,5 @@ solidity:
     - ERC20/TokenVesting
   exclude:
     ERC20,ERC20Basic,SafeERC20,SafeMath,Ownable
+hdwallet:
+  stored: ./.___000data000__
