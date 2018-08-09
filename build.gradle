@@ -8,8 +8,8 @@ golang {
 }
 //构建
 build {
-    resolveBuildDependencies.enabled = false  //构建时不再进行依赖检查
-    installDependencies.enabled = false   //构建时不再进行依赖检查
+    //resolveBuildDependencies.enabled = false  //构建时不再进行依赖检查
+    //installDependencies.enabled = false   //构建时不再进行依赖检查
     // 交叉编译的输出选项，注意，要求go 1.5+
     targetPlatform = ['linux-amd64'] //'windows-amd64','linux-386' 'darwin-amd64',
     environment CGO_ENABLED: "1"
@@ -47,6 +47,7 @@ dependencies {
         build(['name':'github.com/fsnotify/fsnotify'])
         build(['name':'github.com/howeyc/gopass'])
         build(['name':'github.com/jinzhu/gorm'])
+        build(['name':'github.com/kr/pretty'])
         build(['name':'github.com/labstack/echo'])
         build(['name':'github.com/labstack/gommon'])
         build(['name':'github.com/mitchellh/go-homedir'])
