@@ -3,11 +3,11 @@ package command
 import (
 	"github.com/labstack/gommon/log"
 
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/db"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/eth"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/httpservice"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/nsqs"
-	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
 
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/api/v1"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
@@ -24,11 +24,12 @@ var daemonCmd = &cobra.Command{
 			return err
 		}
 		nsqs.Start()
-		if err := eth.CompileSolidity(); err != nil {
+		if err := eth.CompileContracts(); err != nil {
 			return err
 		}
 		go eth.NewEndPointsManager().Run()
 		accounts.NewRootHDWallet()
+
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {

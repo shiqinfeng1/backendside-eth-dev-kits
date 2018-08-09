@@ -39,7 +39,7 @@ func (e *endpoint) heartbeat() bool {
 	var res string
 	err := e.rpc(&res, "net_version")
 	if err != nil {
-		//common.Logger.Error(e.url, "  heartbeat error: connect fail.")
+		common.Logger.Error(e.url, "  heartbeat error: connect fail.")
 		return false
 	}
 	return true

@@ -5,12 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"net/http"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/kr/pretty"
 	cmn "github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 	"github.com/shiqinfeng1/gorequest"
 )
@@ -40,7 +38,7 @@ func (e *ObjectError) Error() string {
 		-32603: "Internal error",
 		-32000: "Server error",
 	}
-	fmt.Sprintf("%d (%s) %s\n%v", e.Code, jsonrpc2ErrorMessages[e.Code], e.Message, e.Data)
+	fmt.Printf("%d (%s) %s\n%v", e.Code, jsonrpc2ErrorMessages[e.Code], e.Message, e.Data)
 
 	return e.Message
 }
@@ -72,11 +70,7 @@ func newRequest() *gorequest.SuperAgent {
 }
 
 //NewClient 创建新的连接
-func NewClient(url string, httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = http.DefaultClient
-	}
-
+func NewClient(url string) *Client {
 	return &Client{
 		url:        url,
 		httpClient: newRequest(),
@@ -98,8 +92,6 @@ func (c *Client) CallMethod(v interface{}, method string, params ...interface{})
 
 	c.idLock.Unlock()
 
-	pretty.Println(req)
-
 	_, bodybytes, errs := c.httpClient.Post(c.url).
 		Send(req).
 		EndBytes()
@@ -109,7 +101,7 @@ func (c *Client) CallMethod(v interface{}, method string, params ...interface{})
 	}
 
 	var parsed ResponseBase
-	err = json.Unmarshal(body, &parsed)
+	err := json.Unmarshal(bodybytes, &parsed)
 	if err != nil {
 		return err
 	}
@@ -121,9 +113,6 @@ func (c *Client) CallMethod(v interface{}, method string, params ...interface{})
 	if req.ID != parsed.ID || parsed.JSONRPC != "2.0" {
 		return errors.New("Error: JSONRPC 2.0 Specification error")
 	}
-
-	pretty.Println(parsed)
-	println(string(parsed.Result))
 
 	return json.Unmarshal(parsed.Result, v)
 }
@@ -168,7 +157,7 @@ func (c *Client) NetVersion() (string, error) {
 func (c *Client) NetListening() (bool, error) {
 	var v bool
 
-	err := c.CallMethod(&v, "net_version")
+	err := c.CallMethod(&v, "net_Listening")
 	if err != nil {
 		return false, err
 	}
@@ -287,10 +276,16 @@ func (c *Client) EthBlockNumber() (*hexutil.Big, error) {
 //EthGetBalance 实现web3.getBalance
 func (c *Client) EthGetBalance(addr common.Address, block *hexutil.Big) (*hexutil.Big, error) {
 	var v hexutil.Big
-
-	err := c.CallMethod(&v, "eth_getBalance", addr, block)
-	if err != nil {
-		return nil, err
+	if block == nil {
+		err := c.CallMethod(&v, "eth_getBalance", addr, "latest")
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err := c.CallMethod(&v, "eth_getBalance", addr, block)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &v, nil
@@ -400,7 +395,7 @@ type TransactionRequest struct {
 	GasPrice *hexutil.Big   `json:"gasPrice"`
 	Value    *hexutil.Big   `json:"value"`
 	Data     hexutil.Bytes  `json:"data"`
-	Nonce    *hexutil.Big   `json:"value"`
+	Nonce    *hexutil.Big   `json:"nonce"`
 }
 
 //EthSendTransaction 实现web3.sendTransaction
