@@ -20,7 +20,7 @@ type GormDB struct {
 // Migrate ...
 func migrate() {
 	idb := MysqlBegin()
-	idb.AutoMigrate(&UserInfo{}, &ProblemInfo{}, &AppendProblemInfo{}, &AssessProblemInfo{})
+	idb.AutoMigrate(&AccountInfo{})
 	idb.MysqlCommit()
 }
 
@@ -39,23 +39,8 @@ func InitMysql() {
 	idb.Set("gorm:table_options", "ENGINE=InnoDB default CHARSET=utf8 auto_increment=1")
 	idb.LogMode(cmn.Config().GetBool("mysql.debug"))
 
-	if idb.HasTable(&UserInfo{}) == false {
-		if err := idb.CreateTable(&UserInfo{}).Error; err != nil {
-			panic(err)
-		}
-	}
-	if idb.HasTable(&ProblemInfo{}) == false {
-		if err := idb.CreateTable(&ProblemInfo{}).Error; err != nil {
-			panic(err)
-		}
-	}
-	if idb.HasTable(&AppendProblemInfo{}) == false {
-		if err := idb.CreateTable(&AppendProblemInfo{}).Error; err != nil {
-			panic(err)
-		}
-	}
-	if idb.HasTable(&AssessProblemInfo{}) == false {
-		if err := idb.CreateTable(&AssessProblemInfo{}).Error; err != nil {
+	if idb.HasTable(&AccountInfo{}) == false {
+		if err := idb.CreateTable(&AccountInfo{}).Error; err != nil {
 			panic(err)
 		}
 	}
