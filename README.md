@@ -37,7 +37,7 @@ nothing descripton
 ## 智能合约接口调用
 ## 以太坊web3接口调用
 
-文件:  service/eth/web3.go
+文件： service/eth/web3.go
 
 说明： client通过gorequest连接到以太坊节点。client实现以太坊web3定义的标准接口。
 
