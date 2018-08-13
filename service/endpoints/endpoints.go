@@ -1,4 +1,4 @@
-package eth
+package endpoints
 
 import (
 	"net/url"
@@ -9,19 +9,20 @@ import (
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 )
 
-type endpoint struct {
-	nodeType       string
+//Endpoint 代表一个节点
+type Endpoint struct {
+	NodeType       string
 	weight         int
-	url            string
+	URL            string
 	isOk           bool
 	interval       int
 	intervalAmount int
 }
 
-func (e *endpoint) rpc(result interface{}, method string, args ...interface{}) error {
-	client, err := rpc.Dial(e.url)
+func (e *Endpoint) rpc(result interface{}, method string, args ...interface{}) error {
+	client, err := rpc.Dial(e.URL)
 	if err != nil {
-		common.Logger.Error("dial error in rpc: ", e.url)
+		common.Logger.Error("dial error in rpc: ", e.URL)
 		return err
 	}
 	err = client.Call(result, method, args...)
@@ -35,11 +36,11 @@ func (e *endpoint) rpc(result interface{}, method string, args ...interface{}) e
 	return nil
 }
 
-func (e *endpoint) heartbeat() bool {
+func (e *Endpoint) heartbeat() bool {
 	var res string
 	err := e.rpc(&res, "net_version")
 	if err != nil {
-		common.Logger.Error(e.url, "  heartbeat error: connect fail.")
+		common.Logger.Error(e.URL, "  heartbeat error: connect fail.")
 		return false
 	}
 	return true
@@ -47,11 +48,11 @@ func (e *endpoint) heartbeat() bool {
 
 // EndpointsManager endpoints of ethereum
 type EndpointsManager struct {
-	endpoints      []*endpoint
-	AliveEndpoints []*endpoint
-	rwMutex        sync.RWMutex
-	exit           chan bool
-	closed         chan bool
+	configedEndpoints []*Endpoint
+	AliveEndpoints    []*Endpoint
+	rwMutex           sync.RWMutex
+	exit              chan bool
+	closed            chan bool
 }
 
 var endPoints *EndpointsManager
@@ -59,10 +60,10 @@ var endPoints *EndpointsManager
 // NewEndPointsManager create a endPoint manager
 func NewEndPointsManager() *EndpointsManager {
 	endPoints = &EndpointsManager{
-		endpoints:      []*endpoint{},
-		AliveEndpoints: []*endpoint{},
-		exit:           make(chan bool),
-		closed:         make(chan bool),
+		configedEndpoints: []*Endpoint{},
+		AliveEndpoints:    []*Endpoint{},
+		exit:              make(chan bool),
+		closed:            make(chan bool),
 	}
 	return endPoints
 }
@@ -75,13 +76,13 @@ func GetEndPointsManager() *EndpointsManager {
 func (e *EndpointsManager) updateEndPoint() {
 	e.rwMutex.Lock()
 	defer e.rwMutex.Unlock()
-	var endpoints []*endpoint
+	var endpoints []*Endpoint
 	endpointURLs := common.Config().GetStringSlice("ethereum.endpoints")
 
 	for _, endpointURL := range endpointURLs {
-		endpoint := &endpoint{
-			nodeType: "ethereum",
-			url:      endpointURL,
+		endpoint := &Endpoint{
+			NodeType: "ethereum",
+			URL:      endpointURL,
 			weight:   1,
 			interval: 0,
 		}
@@ -89,16 +90,16 @@ func (e *EndpointsManager) updateEndPoint() {
 	}
 	endpointURLs = common.Config().GetStringSlice("poa.endpoints")
 	for _, endpointURL := range endpointURLs {
-		endpoint := &endpoint{
-			nodeType: "poa",
-			url:      endpointURL,
+		endpoint := &Endpoint{
+			NodeType: "poa",
+			URL:      endpointURL,
 			weight:   1,
 			interval: 0,
 		}
 		endpoints = append(endpoints, endpoint)
 	}
 
-	e.endpoints = endpoints
+	e.configedEndpoints = endpoints
 }
 
 // Run endpoints run, monitor alive Endpoint
@@ -127,7 +128,7 @@ func (e *EndpointsManager) Stop() {
 }
 
 func (e *EndpointsManager) watchAliveEndpoint() error {
-	for _, item := range e.endpoints {
+	for _, item := range e.configedEndpoints {
 		if item.intervalAmount == 0 {
 			item.isOk = item.heartbeat()
 		}
@@ -144,12 +145,12 @@ func (e *EndpointsManager) watchAliveEndpoint() error {
 func (e *EndpointsManager) updateAliveEndpoint() {
 	e.rwMutex.Lock()
 	defer e.rwMutex.Unlock()
-	res := []*endpoint{}
-	for _, item := range e.endpoints {
+	res := []*Endpoint{}
+	for _, item := range e.configedEndpoints {
 		if item.isOk {
 			res = append(res, item)
 		} else {
-			common.Logger.Error(item.url, ": Not In Service!!!")
+			common.Logger.Error(item.URL, ": Not In Service!!!")
 		}
 	}
 	e.AliveEndpoints = res

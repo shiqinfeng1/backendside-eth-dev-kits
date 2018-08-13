@@ -74,6 +74,10 @@ func ErrorReturnsStruct(c echo.Context, errcode string, msg string) *ReturnBody 
 
 //PadPayload 临时定义
 type PadPayload struct {
-	Sign  string `json:"sign" validate:"required,max=32"` //签名 将生成方法中user_id换成problem_id,其他不变
-	Atime int64  `json:"atime" validate:"required"`       //签名时间戳	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
+	Sign       string `json:"sign" validate:"max=32"`    //签名
+	Atime      int64  `json:"atime" validate:"required"` //签名时间戳	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
+	VerifyCode string `json:"verify_code" validate:"required"`
+	UserID     string `json:"user_id" validate:"required"`
+	Amount     string `json:"amount" validate:"required"`
+	ChainType  string `json:"chain_type" validate:"required,oneof=ethereum poa"`
 }

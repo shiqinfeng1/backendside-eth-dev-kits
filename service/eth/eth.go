@@ -1,18 +1,24 @@
 package eth
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
+	ethcmn "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/kr/pretty"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
 	cmn "github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/endpoints"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/httpservice"
 )
 
-// 获取路径
 func getCurrPath() string {
 	file, _ := exec.LookPath(os.Args[0])
 	path, _ := filepath.Abs(file)
@@ -33,9 +39,9 @@ func checkFileIsExist(filename string) bool {
 
 //ConnectEthNodeForContract 连接以太坊节点
 func ConnectEthNodeForContract(nodeType string) *ethclient.Client {
-	for _, endpoint := range GetEndPointsManager().AliveEndpoints {
-		if nodeType == endpoint.nodeType {
-			con1, err := ethclient.Dial(endpoint.url) //也可以是https地址,websocket地址
+	for _, endpoint := range endpoints.GetEndPointsManager().AliveEndpoints {
+		if nodeType == endpoint.NodeType {
+			con1, err := ethclient.Dial(endpoint.URL) //也可以是https地址,websocket地址
 			if err != nil {
 				continue
 			}
@@ -47,16 +53,16 @@ func ConnectEthNodeForContract(nodeType string) *ethclient.Client {
 
 //ConnectEthNodeForWeb3 连接以太坊节点
 func ConnectEthNodeForWeb3(nodeType string) *Client {
-	for _, endpoint := range GetEndPointsManager().AliveEndpoints {
-		if nodeType == endpoint.nodeType {
-			con := NewClient(endpoint.url)
-			addr := common.HexToAddress("0x1dcef12e93b0abf2d36f723e8b59cc762775d513")
-			v, err := con.EthGetBalance(addr, nil)
-			if err != nil {
-				fmt.Println(v, err)
-				return nil
-			}
-			fmt.Println(v)
+	for _, endpoint := range endpoints.GetEndPointsManager().AliveEndpoints {
+		if nodeType == endpoint.NodeType {
+			con := NewClient(endpoint.URL)
+			// addr := common.HexToAddress("0x1dcef12e93b0abf2d36f723e8b59cc762775d513")
+			// v, err := con.EthGetBalance(addr, nil)
+			// if err != nil {
+			// 	fmt.Println(v, err)
+			// 	return nil
+			// }
+			// fmt.Println(v)
 			return con
 		}
 	}
@@ -115,4 +121,51 @@ func CompileSolidity(source, dest, exclude string) error {
 		fmt.Printf("**************************************************\n\n")
 	}
 	return nil
+}
+
+//Transfer 发送交易
+func Transfer(p httpservice.PadPayload) (string, error) {
+	a, err := math.ParseBig256(p.Amount)
+	if err == false {
+		return "", errors.New("invalid transfer amount")
+	}
+	amount := hexutil.Big(*a)
+
+	v, _ := math.ParseBig256(cmn.Config().GetString("ethereum.gas"))
+	gas := hexutil.Big(*v)
+
+	g, _ := math.ParseBig256(cmn.Config().GetString("ethereum.price"))
+	price := hexutil.Big(*g)
+
+	userAddress, err2 := accounts.GetUserAddress(p.UserID)
+	if err2 != nil {
+		return "", errors.New("no such userID: " + p.UserID + ". err:" + err2.Error())
+	}
+
+	con := ConnectEthNodeForWeb3(p.ChainType)
+	nonce, err3 := con.EthGetNonce(userAddress)
+	if err3 != nil {
+		return "", errors.New("get nounce fail addr: " + userAddress.Hex() + ". err:" + err3.Error())
+	}
+
+	transaction := &cmn.TransactionRequest{
+		From:     userAddress,
+		To:       ethcmn.HexToAddress(cmn.Config().GetString("ethereum.adminaccount")),
+		Gas:      &gas,
+		GasPrice: &price,
+		Value:    &amount,
+		Data:     *new(hexutil.Bytes),
+		Nonce:    nonce,
+	}
+	signedTx, err4 := accounts.SignTx(p.UserID, transaction)
+	if err4 != nil {
+		pretty.Println("\nsignedTx:", signedTx, "\nerror: ", err4, "\n")
+		return "", nil
+	}
+	txHash, err5 := con.EthSendRawTransaction(signedTx)
+	if err5 != nil {
+		pretty.Println("\ntxHash:", txHash.Hex(), "\nerror: ", err5, "\n")
+		return "", nil
+	}
+	return txHash.String(), nil
 }

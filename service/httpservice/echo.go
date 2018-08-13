@@ -14,7 +14,7 @@ import (
 	"github.com/labstack/echo"
 	emw "github.com/labstack/echo/middleware"
 	cmn "github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
-	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/eth"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/endpoints"
 	"gopkg.in/go-playground/validator.v9"
 )
 
@@ -196,6 +196,6 @@ func RunHTTPService(e *echo.Echo) {
 	if err := e.Shutdown(ctx); err != nil {
 		log.Fatal(err)
 	}
-	eth.GetEndPointsManager().Stop()
+	endpoints.GetEndPointsManager().Stop()
 	cmn.Logger.Printf("Diagnosis Server exit\n")
 }

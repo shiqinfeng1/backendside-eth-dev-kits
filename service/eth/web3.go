@@ -303,13 +303,24 @@ func (c *Client) EthGetStorageAt(addr common.Address, pos, block *hexutil.Big) (
 	return v, nil
 }
 
+//EthGetNonce 实现web3.getTransactionCount
+func (c *Client) EthGetNonce(addr common.Address) (*hexutil.Big, error) {
+	return c.EthGetTransactionCount(addr, nil)
+}
+
 //EthGetTransactionCount 实现web3.getTransactionCount
 func (c *Client) EthGetTransactionCount(addr common.Address, block *hexutil.Big) (*hexutil.Big, error) {
 	var v hexutil.Big
-
-	err := c.CallMethod(&v, "eth_getTransactionCount", addr, block)
-	if err != nil {
-		return nil, err
+	if block == nil {
+		err := c.CallMethod(&v, "eth_getTransactionCount", addr, "pending")
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err := c.CallMethod(&v, "eth_getTransactionCount", addr, block)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &v, nil
@@ -387,19 +398,8 @@ func (c *Client) EthSign(addr common.Address, msg []byte) ([]byte, error) {
 	return v, nil
 }
 
-// TransactionRequest 交易请求
-type TransactionRequest struct {
-	From     common.Address `json:"from"`
-	To       common.Address `json:"to"`
-	Gas      *hexutil.Big   `json:"gas"`
-	GasPrice *hexutil.Big   `json:"gasPrice"`
-	Value    *hexutil.Big   `json:"value"`
-	Data     hexutil.Bytes  `json:"data"`
-	Nonce    *hexutil.Big   `json:"nonce"`
-}
-
 //EthSendTransaction 实现web3.sendTransaction
-func (c *Client) EthSendTransaction(req *TransactionRequest) (common.Hash, error) {
+func (c *Client) EthSendTransaction(req *cmn.TransactionRequest) (common.Hash, error) {
 	var v common.Hash
 
 	err := c.CallMethod(&v, "eth_sendTransaction", req)
@@ -512,6 +512,18 @@ func (c *Client) EthCompileSerpent(code string) ([]byte, error) {
 // func (c *Client) EthGetFilterChanges(id big.Int) ([]*Filter, error)               {}
 // func (c *Client) EthGetFilterLogs(id big.Int) ([]*Filter, error)                  {}
 // func (c *Client) EthGetLogs()                                                     {}
+
+//EthGetLogs 实现web3.work
+func (c *Client) EthGetLogs() ([3]common.Hash, error) {
+	var v [3]common.Hash
+
+	err := c.CallMethod(&v, "eth_getLogs")
+	if err != nil {
+		return [3]common.Hash{}, err
+	}
+
+	return v, nil
+}
 
 //EthWork 实现web3.work
 func (c *Client) EthWork() ([3]common.Hash, error) {

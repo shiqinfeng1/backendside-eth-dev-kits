@@ -5,6 +5,7 @@ import (
 
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/db"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/endpoints"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/eth"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/httpservice"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/nsqs"
@@ -27,9 +28,10 @@ var daemonCmd = &cobra.Command{
 		if err := eth.CompileContracts(); err != nil {
 			return err
 		}
-		go eth.NewEndPointsManager().Run()
+		go endpoints.NewEndPointsManager().Run()
 		accounts.NewRootHDWallet()
-
+		//for test
+		accounts.NewAccount("15422339579")
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {

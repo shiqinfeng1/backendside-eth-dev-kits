@@ -3,7 +3,7 @@ httpSrvPort: 8080
 debugLevel: debug  #DEBUG INFO WARN ERROR OFF
 mysql:
   URL: root:11111111@tcp(localhost:3306)
-  dbName: myconsult
+  dbName: ethsmart
   idle: 256
   maxOpen: 1024
   debug: true
@@ -18,6 +18,9 @@ ethereum:
   endpoints: 
     - http://18.222.179.249:21024
     - http://18.222.179.249:21024
+  adminaccount: 0x1dcef12e93b0abf2d36f723e8b59cc762775d513
+  gas: 100000  # 10万
+  price: 30000000000  # 30GWei
   debug: true
 poa:
   endpoints: 

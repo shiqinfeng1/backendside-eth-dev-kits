@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -11,9 +12,11 @@ import (
 	ethacc "github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/howeyc/gopass"
-	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
+	cmn "github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/db"
 	hdwallet "github.com/shiqinfeng1/go-ethereum-hdwallet"
 )
@@ -32,7 +35,7 @@ func NewRootHDWallet() error {
 	}
 
 	var mnemonic string
-	p, _ := filepath.Abs(common.Config().GetString("hdwallet.stored"))
+	p, _ := filepath.Abs(cmn.Config().GetString("hdwallet.stored"))
 	_, err = os.Stat(p) //os.Stat获取文件信息
 	if err == nil || (err != nil && os.IsExist(err)) {
 		mnemonic = decryptoMnemonic(string(pass))
@@ -55,14 +58,12 @@ func NewRootHDWallet() error {
 
 	wallet, err = hdwallet.NewFromMnemonic(mnemonic)
 	if err != nil {
-		fmt.Println("NewFromMnemonic fail:", err)
+		cmn.Logger.Error("NewFromMnemonic fail:", err)
 		return err
 	}
 
 	ks = keystore.NewKeyStore("./keystore", keystore.StandardScryptN, keystore.StandardScryptP)
 
-	NewAccount("15932118444")
-	NewAccount("15422339579")
 	return nil
 }
 
@@ -92,7 +93,7 @@ func useridToIndex(userID string) string {
 	}
 	i := int(v[0])<<24 + int(v[1])<<16 + int(v[2])<<8 + int(v[3])
 	s := strconv.Itoa(i)
-	fmt.Println(userID, "->", s)
+	//fmt.Println("userID:", userID, "-> index:", s)
 	return s
 }
 
@@ -119,13 +120,16 @@ func NewAccount(userID string) error {
 		return err
 	}
 	createAccountInfoToDB(userID, newAcc.URL.Path, account.Address.Hex())
-	fmt.Println("new account:", account.Address.Hex(), newAcc.URL.Path)
+	cmn.Logger.Debug("new account:", account.Address.Hex(), newAcc.URL.Path)
 	return nil
 }
 
 func getTransactOpts(userID string) (*bind.TransactOpts, error) {
 	index := useridToIndex(userID)
-	accInfo := getAccountInfo(userID)
+	accInfo, err := getAccountInfo(userID)
+	if err != nil {
+		return nil, err
+	}
 	password := "m44600" + index
 	//首先导入上面生成的账户密钥（json）和密码
 	transactOpts, err := bind.NewTransactor(strings.NewReader(accInfo.Path), password)
@@ -145,27 +149,73 @@ func getAccountFromHDWallet(index string) (*ethacc.Account, error) {
 }
 
 func createAccountInfoToDB(userID, path, address string) error {
-	accountinfo := &db.AccountInfo{}
-	accountinfo.UserID = userID
-	accountinfo.Path = path
-	accountinfo.Address = address
 
+	accountinfo := &db.AccountInfo{}
 	dbconn := db.MysqlBegin()
 	defer dbconn.MysqlRollback()
 
-	err := dbconn.Create(accountinfo).Error
-	if err != nil {
-		common.Logger.Error(err)
-		return err
+	notFound := dbconn.Model(&db.AccountInfo{}).Where("address = ? and user_id = ?", address, userID).Find(accountinfo).RecordNotFound()
+	if notFound {
+		accountinfo.UserID = userID
+		accountinfo.Path = path
+		accountinfo.Address = address
+		err := dbconn.Create(accountinfo).Error
+		if err != nil {
+			cmn.Logger.Error(err)
+			return err
+		}
+	} else {
+		err := dbconn.Model(accountinfo).Update("path", path).Error
+		if err != nil {
+			cmn.Logger.Error(err)
+			return err
+		}
 	}
 	dbconn.MysqlCommit()
 	return nil
 }
 
-func getAccountInfo(userID string) *db.AccountInfo {
+func getAccountInfo(userID string) (*db.AccountInfo, error) {
 	accountInfo := &db.AccountInfo{}
 	dbconn := db.MysqlBegin()
-	dbconn.Model(&db.AccountInfo{}).Where("user_id = ?", userID).Find(&accountInfo)
+	err := dbconn.Model(&db.AccountInfo{}).Where("user_id = ?", userID).Find(&accountInfo).Error
 	dbconn.MysqlRollback()
-	return accountInfo
+	if err != nil {
+		return nil, err
+	}
+	return accountInfo, nil
+}
+
+//GetUserAddress 获取用户数据
+func GetUserAddress(userID string) (common.Address, error) {
+	accountInfo, err := getAccountInfo(userID)
+	if err != nil {
+		cmn.Logger.Error(err)
+		return common.Address{}, err
+	}
+
+	return common.HexToAddress(accountInfo.Address), nil
+}
+
+//SignTx 交易签名
+func SignTx(userID string, tx *cmn.TransactionRequest) ([]byte, error) {
+	index := useridToIndex(userID)
+	account, err := getAccountFromHDWallet(index)
+	if err != nil {
+		return nil, err
+	}
+	rawTx := types.NewTransaction(
+		tx.Nonce.ToInt().Uint64(),
+		tx.To,
+		tx.Value.ToInt(),
+		tx.Gas.ToInt().Uint64(),
+		tx.GasPrice.ToInt(),
+		tx.Data)
+
+	//pretty.Print("account:", account, "rawTx:", rawTx)
+	signedTx, err := wallet.SignTx(*account, rawTx, nil)
+	var signedData bytes.Buffer
+	signedTx.EncodeRLP(&signedData)
+	//pretty.Print("signedData:", signedData.String())
+	return signedData.Bytes(), nil
 }

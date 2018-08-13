@@ -15,7 +15,7 @@ type Model struct {
 // AccountInfo 账户信息
 type AccountInfo struct {
 	Model
-	UserID  string `gorm:"type:varchar(32);index:idx_ainfo_userid"`
+	UserID  string `gorm:"not null;type:varchar(32);index:idx_ainfo_userid"`
 	Path    string `gorm:"type:varchar(256)"`
-	Address string `gorm:"type:varchar(256)"`
+	Address string `gorm:"not null;unique;type:varchar(256)"`
 }
