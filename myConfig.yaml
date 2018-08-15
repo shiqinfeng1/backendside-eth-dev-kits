@@ -6,7 +6,7 @@ mysql:
   dbName: ethsmart
   idle: 256
   maxOpen: 1024
-  debug: true
+  debug: false
 nsq:
   nodeAddress: 127.0.0.1:4151
   maxInFlight: 100

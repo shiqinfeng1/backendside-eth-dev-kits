@@ -118,7 +118,7 @@ func (e *PendingTransactionManager) watchPendingTransaction() error {
 		}
 		transaction, err := conEth.EthGetTransactionByHash(ethcmn.HexToHash(txHash))
 		if err != nil {
-			cmn.Logger.Debug("query in ethereum txhash: " + txHash + ". error : " + err.Error())
+			cmn.Logger.Debug("query in [ethereum] txhash: " + txHash + ". error : " + err.Error())
 			continue
 		}
 		pretty.Println("query ethereum transaction:\n", transaction)
@@ -133,7 +133,7 @@ func (e *PendingTransactionManager) watchPendingTransaction() error {
 		}
 		transaction, err := conPoa.EthGetTransactionByHash(ethcmn.HexToHash(txHash))
 		if err != nil {
-			cmn.Logger.Debug("query in poa txhash: " + txHash + ". error :" + err.Error())
+			cmn.Logger.Debug("query in [poa] txhash: " + txHash + ". error :" + err.Error())
 			continue
 		}
 		pretty.Println("query poa transaction:\n", transaction)

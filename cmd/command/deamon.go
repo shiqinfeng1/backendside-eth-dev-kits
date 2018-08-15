@@ -4,6 +4,7 @@ import (
 	"github.com/labstack/gommon/log"
 
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/contracts"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/db"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/endpoints"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/eth"
@@ -25,12 +26,11 @@ var daemonCmd = &cobra.Command{
 			return err
 		}
 		nsqs.Start()
-		if err := eth.CompileContracts(); err != nil {
+		if err := contracts.CompileContracts(); err != nil {
 			return err
 		}
 		go endpoints.NewEndPointsManager().Run()
-		ptm := eth.NewPendingTransactionManager()
-		go ptm.Run()
+		go eth.NewPendingTransactionManager().Run()
 		accounts.NewRootHDWallet()
 		//for test
 		accounts.NewAccount("15422339579")
