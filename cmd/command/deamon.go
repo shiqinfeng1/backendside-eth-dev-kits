@@ -29,6 +29,8 @@ var daemonCmd = &cobra.Command{
 			return err
 		}
 		go endpoints.NewEndPointsManager().Run()
+		ptm := eth.NewPendingTransactionManager()
+		go ptm.Run()
 		accounts.NewRootHDWallet()
 		//for test
 		accounts.NewAccount("15422339579")

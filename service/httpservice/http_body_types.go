@@ -72,12 +72,22 @@ func ErrorReturnsStruct(c echo.Context, errcode string, msg string) *ReturnBody 
 	return returns
 }
 
-//PadPayload 临时定义
-type PadPayload struct {
+//TransferPayload 转账原生币参数
+type TransferPayload struct {
 	Sign       string `json:"sign" validate:"max=32"`    //签名
 	Atime      int64  `json:"atime" validate:"required"` //签名时间戳	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 	VerifyCode string `json:"verify_code" validate:"required"`
 	UserID     string `json:"user_id" validate:"required"`
 	Amount     string `json:"amount" validate:"required"`
+	ChainType  string `json:"chain_type" validate:"required,oneof=ethereum poa"`
+}
+
+//RawTransactionPayload 离线交易参数
+type RawTransactionPayload struct {
+	Sign       string `json:"sign" validate:"max=32"`    //签名
+	Atime      int64  `json:"atime" validate:"required"` //签名时间戳	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
+	VerifyCode string `json:"verify_code" validate:"required"`
+	UserID     string `json:"user_id" validate:"required"`
+	SignedData string `json:"signed_data" validate:"required"`
 	ChainType  string `json:"chain_type" validate:"required,oneof=ethereum poa"`
 }

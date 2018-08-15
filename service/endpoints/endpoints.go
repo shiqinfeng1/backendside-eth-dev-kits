@@ -1,7 +1,6 @@
 package endpoints
 
 import (
-	"net/url"
 	"sync"
 	"time"
 
@@ -114,7 +113,7 @@ func (e *EndpointsManager) Run() {
 			e.watchAliveEndpoint()
 		case <-e.exit:
 			close(e.closed)
-			common.Logger.Info("service done!!!")
+			common.Logger.Info("watch alive endpoint service done!!!")
 			return
 		}
 	}
@@ -157,19 +156,4 @@ func (e *EndpointsManager) updateAliveEndpoint() {
 	if len(e.AliveEndpoints) == 0 {
 		common.Logger.Error("No Node In Service!!!")
 	}
-}
-
-// RPC rpc
-func (e *EndpointsManager) RPC(result interface{}, method string, args ...interface{}) (err error) {
-	e.rwMutex.RLock()
-	defer e.rwMutex.RUnlock()
-	for _, item := range e.AliveEndpoints {
-		err = item.rpc(result, method, args...)
-		if _, ok := err.(*url.Error); ok {
-			continue
-		} else {
-			break
-		}
-	}
-	return
 }

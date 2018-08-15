@@ -21,6 +21,7 @@ type GormDB struct {
 func migrate() {
 	idb := MysqlBegin()
 	idb.AutoMigrate(&AccountInfo{})
+	idb.AutoMigrate(&PendingTransactionInfo{})
 	idb.MysqlCommit()
 }
 
@@ -41,6 +42,11 @@ func InitMysql() {
 
 	if idb.HasTable(&AccountInfo{}) == false {
 		if err := idb.CreateTable(&AccountInfo{}).Error; err != nil {
+			panic(err)
+		}
+	}
+	if idb.HasTable(&PendingTransactionInfo{}) == false {
+		if err := idb.CreateTable(&PendingTransactionInfo{}).Error; err != nil {
 			panic(err)
 		}
 	}

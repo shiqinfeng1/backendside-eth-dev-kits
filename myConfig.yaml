@@ -1,6 +1,6 @@
 useViper: true
 httpSrvPort: 8080
-debugLevel: debug  #DEBUG INFO WARN ERROR OFF
+debugLevel: info  #DEBUG INFO WARN ERROR OFF
 mysql:
   URL: root:11111111@tcp(localhost:3306)
   dbName: ethsmart

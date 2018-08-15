@@ -438,7 +438,19 @@ func (c *Client) EthGetBlockByHash(hash common.Hash, full bool) (common.Hash, er
 }
 
 // func (c *Client) EthGetBlockByNumber(block BlockNumber, full bool) (*Block, error)       {}
-// func (c *Client) EthGetTransactionByHash(hash [32]byte, full bool) (*Transaction, error) {}
+
+//EthGetTransactionByHash 查询交易详情
+func (c *Client) EthGetTransactionByHash(hash common.Hash) (*Transaction, error) {
+	var v Transaction
+
+	err := c.CallMethod(&v, "eth_getTransactionByHash", hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &v, nil
+}
+
 // func (c *Client) EthGetTransactionByBlockHashAndIndex(hash [32]byte, idx big.Int) (*Transaction, error) {}
 // func (c *Client) EthGetTransactionByBlockHashAndIndex(block BlockNumber, idx big.Int) (*Transaction, error) {}
 
@@ -575,13 +587,28 @@ func (c *Client) EthSubmitHashrate(hashrate, id common.Hash) (bool, error) {
 // TransactionReceipt 交易凭证
 type TransactionReceipt struct {
 	Hash              common.Hash    `json:"transactionHash"`
-	TransactionIndex  uint64         `json:"transactionIndex"`
+	TransactionIndex  *hexutil.Big   `json:"transactionIndex"`
 	BlockNumber       *hexutil.Big   `json:"blockNumber"`
 	BlockHash         common.Hash    `json:"blockHash"`
 	CumulativeGasUsed *hexutil.Big   `json:"cumulativeGasUsed"`
 	GasUsed           *hexutil.Big   `json:"gasUsed"`
 	ContractAddress   common.Address `json:"contractAddress"`
 	Logs              []Log          `json:"logs"`
+}
+
+// Transaction 交易凭证
+type Transaction struct {
+	Hash             common.Hash    `json:"hash"`
+	Nonce            *hexutil.Big   `json:"nonce"`
+	BlockHash        common.Hash    `json:"blockHash"`
+	BlockNumber      *hexutil.Big   `json:"blockNumber"`
+	TransactionIndex *hexutil.Big   `json:"transactionIndex"`
+	From             common.Address `json:"from"`
+	To               common.Address `json:"to"`
+	Value            *hexutil.Big   `json:"value"`
+	GasPrice         *hexutil.Big   `json:"gasPrice"`
+	Gas              *hexutil.Big   `json:"gas"`
+	Input            []byte         `json:"input"`
 }
 
 // Topic 事件数据结构
