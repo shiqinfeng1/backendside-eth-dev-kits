@@ -64,8 +64,9 @@ func (e *PendingTransactionManager) updateTransactionStatus(txHash string, statu
 
 	notFound := dbconn.Model(&db.PendingTransactionInfo{}).Where("tx_hash = ?", txHash).Find(ptInfo).RecordNotFound()
 	if notFound {
-		cmn.Logger.Error("not found txHash:" + txHash + "in PendingTransactionInfo")
-		return errors.New("not found txHash:" + txHash + "in PendingTransactionInfo")
+		err := "not found txHash:" + txHash + "in PendingTransactionInfo"
+		cmn.Logger.Error(err)
+		return errors.New(err)
 	}
 	err := dbconn.Model(ptInfo).Update("mined", status).Error
 	if err != nil {
@@ -86,10 +87,14 @@ func (e *PendingTransactionManager) updateTransactionTimeout(txHash string, list
 
 	notFound := dbconn.Model(&db.PendingTransactionInfo{}).Where("tx_hash = ?", txHash).Find(ptInfo).RecordNotFound()
 	if notFound {
-		cmn.Logger.Error("not found txHash:" + txHash + "in PendingTransactionInfo")
-		return errors.New("not found txHash:" + txHash + "in PendingTransactionInfo")
+		err := "not found txHash:" + txHash + "in PendingTransactionInfo"
+		cmn.Logger.Error(err)
+		return errors.New(err)
 	}
-
+	if ptInfo.Mined == true {
+		cmn.Logger.Debug("transaction is already be mined: " + txHash)
+		return nil
+	}
 	err := dbconn.Model(ptInfo).Update("listen_timeout_at", listenTimeoutAt).Update("listen_timeout", true).Error
 	if err != nil {
 		cmn.Logger.Error(err)
@@ -117,7 +122,7 @@ func (e *PendingTransactionManager) watchPendingTransaction() error {
 			continue
 		}
 		pretty.Println("query ethereum transaction:\n", transaction)
-		if transaction.BlockNumber.ToInt().Uint64() > 0 {
+		if transaction.BlockNumber != nil && transaction.BlockNumber.ToInt().Uint64() > 0 {
 			e.updateTransactionStatus(txHash, true)
 			break
 		}
@@ -132,7 +137,7 @@ func (e *PendingTransactionManager) watchPendingTransaction() error {
 			continue
 		}
 		pretty.Println("query poa transaction:\n", transaction)
-		if transaction.BlockNumber.ToInt().Uint64() > 0 {
+		if transaction.BlockNumber != nil && transaction.BlockNumber.ToInt().Uint64() > 0 {
 			e.updateTransactionStatus(txHash, true)
 			break
 		}

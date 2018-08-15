@@ -598,17 +598,17 @@ type TransactionReceipt struct {
 
 // Transaction 交易凭证
 type Transaction struct {
-	Hash             common.Hash    `json:"hash"`
-	Nonce            *hexutil.Big   `json:"nonce"`
-	BlockHash        common.Hash    `json:"blockHash"`
-	BlockNumber      *hexutil.Big   `json:"blockNumber"`
-	TransactionIndex *hexutil.Big   `json:"transactionIndex"`
-	From             common.Address `json:"from"`
-	To               common.Address `json:"to"`
-	Value            *hexutil.Big   `json:"value"`
-	GasPrice         *hexutil.Big   `json:"gasPrice"`
-	Gas              *hexutil.Big   `json:"gas"`
-	Input            []byte         `json:"input"`
+	Hash             common.Hash     `json:"hash"`
+	Nonce            *hexutil.Big    `json:"nonce"`
+	BlockHash        common.Hash     `json:"blockHash"`
+	BlockNumber      *hexutil.Big    `json:"blockNumber"`
+	TransactionIndex *hexutil.Big    `json:"transactionIndex"`
+	From             common.Address  `json:"from"`
+	To               common.Address  `json:"to"`
+	Value            *hexutil.Big    `json:"value"`
+	GasPrice         *hexutil.Big    `json:"gasPrice"`
+	Gas              *hexutil.Big    `json:"gas"`
+	Input            json.RawMessage `json:"input"`
 }
 
 // Topic 事件数据结构
