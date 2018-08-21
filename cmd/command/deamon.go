@@ -1,8 +1,6 @@
 package command
 
 import (
-	"github.com/labstack/gommon/log"
-
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/contracts"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/db"
@@ -20,11 +18,11 @@ var daemonCmd = &cobra.Command{
 	Use:   "daemon",
 	Short: "start a daemon backend service",
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		common.Logger = log.New("daemon")
 		db.InitMysql()
 		if err := nsqs.InitConfig(); err != nil {
 			return err
 		}
+		common.LoggerInit(common.Config().GetString("debugLevel"))
 		nsqs.Start()
 		if err := contracts.CompileContracts(); err != nil {
 			return err
@@ -34,6 +32,14 @@ var daemonCmd = &cobra.Command{
 		accounts.NewRootHDWallet()
 		//for test
 		accounts.NewAccount("15422339579")
+
+		if auth, err := contracts.GetUserAuth("15422339579"); err != nil {
+			common.Logger.Error("GetUserAuth: 15422339579 fail.")
+			return nil
+		} else {
+			contracts.DeployOMCToken(auth)
+		}
+
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {

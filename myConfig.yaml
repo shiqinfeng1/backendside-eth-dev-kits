@@ -19,6 +19,7 @@ ethereum:
     - http://18.222.179.249:21024
     - http://18.222.179.249:21024
   adminaccount: 0x1dcef12e93b0abf2d36f723e8b59cc762775d513
+  omcaddress: 0x4e9022F7decf43A47EE207c90Ee5258222393244
   gas: 100000  # 10万
   price: 30000000000  # 30GWei
   debug: true
@@ -26,11 +27,11 @@ poa:
   endpoints: 
     - http://18.222.179.249:21024
     - http://18.222.179.249:21024
+  pointaddress: 
 solidity:
   source:
-    - ERC20/TokenTimelock
-    - ERC20/TokenVesting
+    - ERC20/OMC
   exclude:
-    ERC20,ERC20Basic,SafeERC20,SafeMath,Ownable
+    ERC20,ERC20Basic,SafeERC20,SafeMath,Ownable,BasicToken,BurnableToken,DetailedERC20,StandardToken,StandardBurnableToken
 hdwallet:
   stored: ./.___000data000__

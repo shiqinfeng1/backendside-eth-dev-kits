@@ -41,6 +41,7 @@ repositories {
     }
 }
 
+
 dependencies {
     golang {
         build(['name':'github.com/ethereum/go-ethereum'])
@@ -51,9 +52,11 @@ dependencies {
         build(['name':'github.com/labstack/echo'])
         build(['name':'github.com/labstack/gommon'])
         build(['name':'github.com/mitchellh/go-homedir'])
+        build(['name':'github.com/natefinch/lumberjack'])
         build(['name':'github.com/nicksnyder/go-i18n'])
         build(['name':'github.com/nsqio/go-nsq'])
         build(['name':'github.com/shiqinfeng1/go-ethereum-hdwallet'])
+        build(['name':'github.com/shiqinfeng1/go-logging'])
         build(['name':'github.com/shiqinfeng1/gorequest'])
         build(['name':'github.com/spf13/cobra'])
         build(['name':'github.com/spf13/viper'])

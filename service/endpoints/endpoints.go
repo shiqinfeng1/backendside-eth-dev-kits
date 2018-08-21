@@ -39,7 +39,7 @@ func (e *Endpoint) heartbeat() bool {
 	var res string
 	err := e.rpc(&res, "net_version")
 	if err != nil {
-		common.Logger.Error(e.URL, "  heartbeat error: connect fail.")
+		common.Logger.Error(e.URL, "  heartbeat error: connect fail at: ", time.Now())
 		return false
 	}
 	return true
@@ -149,7 +149,7 @@ func (e *EndpointsManager) updateAliveEndpoint() {
 		if item.isOk {
 			res = append(res, item)
 		} else {
-			common.Logger.Error(item.URL, ": Not In Service!!!")
+			common.Logger.Error(item.URL, ": Not In Service!!! at: ", time.Now())
 		}
 	}
 	e.AliveEndpoints = res

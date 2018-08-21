@@ -65,7 +65,7 @@ type BlockNumber big.Int
 func newRequest() *gorequest.SuperAgent {
 	request := gorequest.New()
 	request.SetDebug(cmn.Config().GetBool("ethereum.debug"))
-	request.SetLogger(cmn.Logger)
+	//request.SetLogger(cmn.Logger)
 	return request
 }
 

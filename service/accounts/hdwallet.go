@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -120,20 +121,50 @@ func NewAccount(userID string) error {
 		return err
 	}
 	createAccountInfoToDB(userID, newAcc.URL.Path, account.Address.Hex())
-	cmn.Logger.Debug("new account:", account.Address.Hex(), newAcc.URL.Path)
+	cmn.Logger.Debug("NEW ACCOUNT address:", account.Address.Hex())
+	cmn.Logger.Debug("NEW ACCOUNT path:", newAcc.URL.Path)
 	return nil
 }
 
-func getTransactOpts(userID string) (*bind.TransactOpts, error) {
+func readKeystore(userAddress string) []byte {
+	if userAddress[:2] == "0x" || userAddress[:2] == "0X" {
+		userAddress = userAddress[2:]
+	}
+	files, _ := ioutil.ReadDir("./keystore")
+	for _, f := range files {
+		if bytes.Contains([]byte(f.Name()), []byte(strings.ToLower(userAddress))) {
+			p, _ := filepath.Abs("./keystore/" + f.Name())
+			keys, _ := ioutil.ReadFile(p)
+			return keys
+		}
+	}
+	return []byte{}
+}
+
+// GetTransactOptsFromHDWallet 交易调用参数
+func GetTransactOptsFromHDWallet(userID string) (*bind.TransactOpts, error) {
 	index := useridToIndex(userID)
 	accInfo, err := getAccountInfo(userID)
 	if err != nil {
 		return nil, err
 	}
-	password := "m44600" + index
 	//首先导入上面生成的账户密钥（json）和密码
-	transactOpts, err := bind.NewTransactor(strings.NewReader(accInfo.Path), password)
+	keys, _ := ioutil.ReadFile(accInfo.Path)
+	transactOpts, err := bind.NewTransactor(strings.NewReader(string(keys)), "m44600"+index)
+	cmn.Logger.Debug("step3", err)
 	return transactOpts, err
+}
+
+// GetTransactOptsFromKeystore is the collection of authorization data required to create a valid Ethereum transaction.
+func GetTransactOptsFromKeystore(userAddress string, _passphrase string) (*bind.TransactOpts, error) {
+	keys := readKeystore(userAddress)
+	key, err := keystore.DecryptKey(keys, _passphrase)
+	if err != nil {
+		cmn.Logger.Errorf("Failed to decrypt key: %v", err)
+		return nil, err
+	}
+	// 对keystore采取对称加密解析出私钥
+	return bind.NewKeyedTransactor(key.PrivateKey), nil
 }
 
 func getAccountFromHDWallet(index string) (*ethacc.Account, error) {

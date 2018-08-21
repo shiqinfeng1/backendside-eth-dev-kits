@@ -12,7 +12,7 @@ import (
 func ShootMessage(address, topic string, payload interface{}) error {
 	request := gorequest.New().Timeout(10 * time.Second)
 	request.SetDebug(cmn.Config().GetBool("nsq.debug"))
-	request.SetLogger(cmn.Logger)
+	//request.SetLogger(cmn.Logger)
 	_, _, errs := request.Post(fmt.Sprintf("http://%s/pub?topic=%s", address, topic)).
 		Send(payload).
 		End()

@@ -12,7 +12,7 @@ type UserAuthReponse struct {
 func newRequest() *gorequest.SuperAgent {
 	request := gorequest.New()
 	request.SetDebug(Config().GetBool("common.debug"))
-	request.SetLogger(Logger)
+	//request.SetLogger(Logger)
 	return request
 }
 

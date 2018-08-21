@@ -153,7 +153,6 @@ func echoInit(e *echo.Echo) {
 	} else {
 		e.Debug = true
 	}
-	cmn.LoggerInit(e, cmn.Config().GetString("debugLevel"))
 	e.HTTPErrorHandler = EchoHTTPErrorHandler(e)
 	e.Validator = &cmn.SimpleValidator{Validator: validator.New()}
 }
@@ -178,7 +177,7 @@ func RunHTTPService(e *echo.Echo) {
 
 	srvAddr := ":" + cmn.Config().GetString("httpSrvPort")
 
-	cmn.Logger.Printf("Listening and serving HTTP on %s\n", srvAddr)
+	e.Logger.Printf("Listening and serving HTTP on %s\n", srvAddr)
 	// Start server
 	go func() {
 		if err := e.Start(srvAddr); err != nil {
@@ -197,5 +196,5 @@ func RunHTTPService(e *echo.Echo) {
 		log.Fatal(err)
 	}
 	endpoints.GetEndPointsManager().Stop()
-	cmn.Logger.Printf("Diagnosis Server exit\n")
+	e.Logger.Printf("Diagnosis Server exit\n")
 }
