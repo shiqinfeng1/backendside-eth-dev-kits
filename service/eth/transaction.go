@@ -57,7 +57,7 @@ func (e *PendingTransactionManager) importAllPendingTransactions() {
 }
 
 // 更新交易的状态 mined
-func (e *PendingTransactionManager) updateTransactionStatus(txHash string, status bool) error {
+func (e *PendingTransactionManager) updateTransactionStatus(txHash string, status, success bool) error {
 	var ptInfo = &db.PendingTransactionInfo{}
 	dbconn := db.MysqlBegin()
 	defer dbconn.MysqlRollback()
@@ -68,7 +68,7 @@ func (e *PendingTransactionManager) updateTransactionStatus(txHash string, statu
 		cmn.Logger.Error(err)
 		return errors.New(err)
 	}
-	err := dbconn.Model(ptInfo).Update("mined", status).Error
+	err := dbconn.Model(ptInfo).Update("mined", status).Update("success", success).Error
 	if err != nil {
 		cmn.Logger.Error(err)
 		return err
@@ -118,12 +118,19 @@ func (e *PendingTransactionManager) watchPendingTransaction() error {
 		}
 		transaction, err := conEth.EthGetTransactionByHash(ethcmn.HexToHash(txHash))
 		if err != nil {
-			cmn.Logger.Debug("query in [ethereum] txhash: " + txHash + ". error : " + err.Error())
+			cmn.Logger.Debug("query transaction in [ethereum] txhash: " + txHash + ". error : " + err.Error())
 			continue
 		}
-		pretty.Println("query ethereum transaction:\n", transaction)
 		if transaction.BlockNumber != nil && transaction.BlockNumber.ToInt().Uint64() > 0 {
-			e.updateTransactionStatus(txHash, true)
+			//检查交易是否成功
+			receipt, err := conEth.EthGetTransactionReceipt(ethcmn.HexToHash(txHash))
+			if err != nil {
+				cmn.Logger.Debug("query receipt in [ethereum] txhash: " + txHash + ". error : " + err.Error())
+				continue
+			}
+			cmn.Logger.Debug("receipt.GasUsed.ToInt().Uint64() < transaction.Gas.ToInt().Uint64()", receipt.GasUsed.ToInt().Uint64(), transaction.Gas.ToInt().Uint64())
+			//更新交易状态到数据库
+			e.updateTransactionStatus(txHash, true, (receipt.Status.ToInt().Uint64() == 1))
 			break
 		}
 	}
@@ -138,7 +145,14 @@ func (e *PendingTransactionManager) watchPendingTransaction() error {
 		}
 		pretty.Println("query poa transaction:\n", transaction)
 		if transaction.BlockNumber != nil && transaction.BlockNumber.ToInt().Uint64() > 0 {
-			e.updateTransactionStatus(txHash, true)
+			//检查交易是否成功
+			receipt, err := conPoa.EthGetTransactionReceipt(ethcmn.HexToHash(txHash))
+			if err != nil {
+				cmn.Logger.Debug("query receipt in [poa] txhash: " + txHash + ". error : " + err.Error())
+				continue
+			}
+			//更新交易状态到数据库
+			e.updateTransactionStatus(txHash, true, (receipt.Status.ToInt().Uint64() == 1))
 			break
 		}
 	}
@@ -226,7 +240,7 @@ func AppendToPendingPool(chainType, userID string, txHash ethcmn.Hash, from, to 
 }
 
 //IsMined 查询交易是否上链
-func IsMined(txHash string) (bool, error) {
+func IsMined(txHash string) (bool, bool, error) {
 	ptInfo := &db.PendingTransactionInfo{}
 	dbconn := db.MysqlBegin()
 	defer dbconn.MysqlRollback()
@@ -238,12 +252,12 @@ func IsMined(txHash string) (bool, error) {
 
 	if notFound {
 		cmn.Logger.Error("[query transaction is mined]no such txHash:", txHash)
-		return false, errors.New("no such txHash: " + txHash)
+		return false, false, errors.New("no such txHash: " + txHash)
 	}
 
 	if ptInfo.ListenTimeout == true {
 		cmn.Logger.Error("[query transaction is mined]txhash:", txHash, ". timeout at:", ptInfo.ListenTimeoutAt)
-		return false, errors.New("no more listen this pending transaction: " + txHash)
+		return false, false, errors.New("no more listen this pending transaction: " + txHash)
 	}
-	return ptInfo.Mined, nil
+	return ptInfo.Mined, ptInfo.Success, nil
 }

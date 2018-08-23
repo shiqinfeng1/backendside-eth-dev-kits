@@ -9,7 +9,7 @@ import "./DetailedERC20.sol";
  */
 contract OMC is StandardBurnableToken,DetailedERC20 {
     using SafeMath for uint256;
-    address techAddr = 0x1dcef12e93b0abf2d36f723e8b59cc762775d513; //  10%
+    address techAddr = 0xdf0759b89b9a9e83500e11978ef903e740c895ff; //  10%
     address communityAddr = 0x1dcef12e93b0abf2d36f723e8b59cc762775d513; // 5% 
     address legalAddr = 0x1dcef12e93b0abf2d36f723e8b59cc762775d513; // 2%
     address marketAddr = 0x1dcef12e93b0abf2d36f723e8b59cc762775d513; // 3%
@@ -21,7 +21,7 @@ contract OMC is StandardBurnableToken,DetailedERC20 {
         DetailedERC20("OMChain Token", "OMC",6)
         public {
             totalSupply_ =             1000000000e6;
-            balances[techAddr] =        100000000e6;
+            balances[techAddr] =        1e6; //100000000e6;
             balances[communityAddr] =    50000000e6;
             balances[legalAddr] =        20000000e6;
             balances[marketAddr] =       30000000e6;

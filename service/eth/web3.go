@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	cmn "github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 	"github.com/shiqinfeng1/gorequest"
 )
@@ -458,7 +459,7 @@ func (c *Client) EthGetTransactionByHash(hash common.Hash) (*Transaction, error)
 func (c *Client) EthGetTransactionReceipt(hash common.Hash) (*TransactionReceipt, error) {
 	var v TransactionReceipt
 
-	err := c.CallMethod(&v, "eth_getTransactionReceipt")
+	err := c.CallMethod(&v, "eth_getTransactionReceipt", hash)
 	if err != nil {
 		return nil, err
 	}
@@ -586,14 +587,21 @@ func (c *Client) EthSubmitHashrate(hashrate, id common.Hash) (bool, error) {
 
 // TransactionReceipt 交易凭证
 type TransactionReceipt struct {
-	Hash              common.Hash    `json:"transactionHash"`
-	TransactionIndex  *hexutil.Big   `json:"transactionIndex"`
-	BlockNumber       *hexutil.Big   `json:"blockNumber"`
-	BlockHash         common.Hash    `json:"blockHash"`
-	CumulativeGasUsed *hexutil.Big   `json:"cumulativeGasUsed"`
-	GasUsed           *hexutil.Big   `json:"gasUsed"`
-	ContractAddress   common.Address `json:"contractAddress"`
-	Logs              []Log          `json:"logs"`
+	// Consensus fields
+	BlockHash         common.Hash     `json:"blockHash"`
+	BlockNumber       *hexutil.Big    `json:"blockNumber"`
+	From              *common.Address `json:"from"`
+	To                *common.Address `json:"to"`
+	Status            *hexutil.Big    `json:"status"`
+	CumulativeGasUsed *hexutil.Big    `json:"cumulativeGasUsed"`
+	Bloom             types.Bloom     `json:"logsBloom"`
+	Logs              []*Log          `json:"logs"`
+
+	// Implementation fields (don't reorder!)
+	TxHash          common.Hash     `json:"transactionHash"`
+	ContractAddress *common.Address `json:"contractAddress"`
+	GasUsed         *hexutil.Big    `json:"gasUsed"`
+	TxIndex         *hexutil.Big    `json:"transactionIndex"`
 }
 
 // Transaction 交易凭证
@@ -603,30 +611,38 @@ type Transaction struct {
 	BlockHash        common.Hash     `json:"blockHash"`
 	BlockNumber      *hexutil.Big    `json:"blockNumber"`
 	TransactionIndex *hexutil.Big    `json:"transactionIndex"`
-	From             common.Address  `json:"from"`
-	To               common.Address  `json:"to"`
+	From             *common.Address `json:"from"`
+	To               *common.Address `json:"to"`
 	Value            *hexutil.Big    `json:"value"`
 	GasPrice         *hexutil.Big    `json:"gasPrice"`
 	Gas              *hexutil.Big    `json:"gas"`
 	Input            json.RawMessage `json:"input"`
 }
 
-// Topic 事件数据结构
-type Topic struct {
-	Data []byte
-}
-
-// Topics 事件
-type Topics []Topic
-
-// Log 记录日志
+// Log 事件存储
 type Log struct {
-	LogIndex         uint64         `json:"logIndex"`
-	BlockNumber      *hexutil.Big   `json:"blockNumber"`
-	BlockHash        common.Hash    `json:"blockHash"`
-	TransactionHash  common.Hash    `json:"transactionHash"`
-	TransactionIndex uint64         `json:"transactionIndex"`
-	Address          common.Address `json:"address"`
-	Data             []byte         `json:"data"`
-	Topics           Topics         `json:"topics"`
+	// Consensus fields:
+	// address of the contract that generated the event
+	Address *common.Address `json:"address" `
+	// list of topics provided by the contract.
+	Topics []common.Hash `json:"topics"`
+	// supplied by the contract, usually ABI-encoded
+	Data json.RawMessage `json:"data"`
+
+	// Derived fields. These fields are filled in by the node
+	// but not secured by consensus.
+	// block in which the transaction was included
+	BlockNumber *hexutil.Big `json:"blockNumber"`
+	// hash of the transaction
+	TxHash common.Hash `json:"transactionHash" gencodec:"required"`
+	// index of the transaction in the block
+	TxIndex *hexutil.Big `json:"transactionIndex" gencodec:"required"`
+	// hash of the block in which the transaction was included
+	BlockHash common.Hash `json:"blockHash"`
+	// index of the log in the receipt
+	Index *hexutil.Big `json:"logIndex" gencodec:"required"`
+
+	// The Removed field is true if this log was reverted due to a chain reorganisation.
+	// You must pay attention to this field if you receive logs through a filter query.
+	Removed bool `json:"removed"`
 }

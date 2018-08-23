@@ -121,8 +121,8 @@ func NewAccount(userID string) error {
 		return err
 	}
 	createAccountInfoToDB(userID, newAcc.URL.Path, account.Address.Hex())
-	cmn.Logger.Debug("NEW ACCOUNT address:", account.Address.Hex())
-	cmn.Logger.Debug("NEW ACCOUNT path:", newAcc.URL.Path)
+	cmn.Logger.Debug("CREATE NEW ACCOUNT address:", account.Address.Hex())
+	cmn.Logger.Debug("CREATE NEW ACCOUNT path:", newAcc.URL.Path)
 	return nil
 }
 
@@ -151,7 +151,6 @@ func GetTransactOptsFromHDWallet(userID string) (*bind.TransactOpts, error) {
 	//首先导入上面生成的账户密钥（json）和密码
 	keys, _ := ioutil.ReadFile(accInfo.Path)
 	transactOpts, err := bind.NewTransactor(strings.NewReader(string(keys)), "m44600"+index)
-	cmn.Logger.Debug("step3", err)
 	return transactOpts, err
 }
 

@@ -37,7 +37,10 @@ var daemonCmd = &cobra.Command{
 			common.Logger.Error("GetUserAuth: 15422339579 fail.")
 			return nil
 		} else {
-			contracts.DeployOMCToken(auth)
+			if common.Config().GetString("ethereum.omcaddress") == "" {
+				contracts.DeployOMCToken("ethereum", "15422339579", auth)
+			}
+			contracts.OMCTokenTransfer("ethereum", "15422339579", auth, "0x1dcef12e93b0abf2d36f723e8b59cc762775d513", 100000)
 		}
 
 		return nil

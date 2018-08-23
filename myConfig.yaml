@@ -19,9 +19,10 @@ ethereum:
     - http://18.222.179.249:21024
     - http://18.222.179.249:21024
   adminaccount: 0x1dcef12e93b0abf2d36f723e8b59cc762775d513
-  omcaddress: 0x4e9022F7decf43A47EE207c90Ee5258222393244
+  omcaddress: 0xCf8d6b603aB97853394fA51dbe38085a147B7e27
   gas: 100000  # 10万
   price: 30000000000  # 30GWei
+  txtimeout: 30
   debug: true
 poa:
   endpoints: 
