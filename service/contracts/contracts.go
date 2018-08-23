@@ -1,6 +1,7 @@
 package contracts
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -187,6 +188,9 @@ func DeployOMCToken(chainName, userID string, auth *bind.TransactOpts) (*ERC20.O
 // AttachOMCToken 部署合约
 func AttachOMCToken(chainName string) (*ERC20.OMC, *ethclient.Client, error) {
 	client := eth.ConnectEthNodeForContract(chainName)
+	if client == nil {
+		return nil, nil, errors.New("no eth client")
+	}
 	token, err := ERC20.NewOMC(common.HexToAddress(cmn.Config().GetString("ethereum.omcaddress")), client)
 	if err != nil {
 		cmn.Logger.Errorf("Failed to instantiate a Token contract: %v", err)
@@ -196,7 +200,7 @@ func AttachOMCToken(chainName string) (*ERC20.OMC, *ethclient.Client, error) {
 
 func catchEventTransfer(omc *ERC20.OMC, startBlock uint64, from, to []common.Address) {
 	//TODO: 记录捕获Transfer事件
-	history, err := omc.FilterTransfer(&bind.FilterOpts{Start: 0}, from, to)
+	history, err := omc.FilterTransfer(&bind.FilterOpts{Start: startBlock}, from, to)
 	if err != nil {
 		cmn.Logger.Errorf("fail to FilterTransfer: %v", err)
 		return
@@ -227,11 +231,11 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 	gas, _ := math.ParseBig256(cmn.Config().GetString("ethereum.gas"))
 	auth.GasLimit = gas.Uint64()
 	omc, conn, err := AttachOMCToken(chainName)
-	defer conn.Close()
 	if err != nil {
 		cmn.Logger.Errorf("Failed to AttachOMCToken: %v", err)
 		return nil, err
 	}
+	defer conn.Close()
 	txn, err := omc.Transfer(auth, common.HexToAddress(receiver), big.NewInt(0).SetUint64(amount))
 	if err != nil {
 		cmn.Logger.Errorf("Failed to Transfer: %v", err)
@@ -257,11 +261,11 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 //OMCTokenBalanceOf 查询余额
 func OMCTokenBalanceOf(chainName string, addr common.Address) (*big.Int, error) {
 	omc, conn, err := AttachOMCToken(chainName)
-	defer conn.Close()
 	if err != nil {
 		cmn.Logger.Errorf("Failed to AttachOMCToken: %v", err)
 		return nil, err
 	}
+	defer conn.Close()
 	balance, err := omc.BalanceOf(&bind.CallOpts{Pending: true}, addr)
 	if err != nil {
 		cmn.Logger.Errorf("Get BalanceOf: %v fail: %v", addr, err)
