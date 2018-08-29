@@ -97,7 +97,7 @@ func Transfer(p httpservice.TransferPayload) (string, error) {
 		return "", nil
 	}
 
-	// for test
+	// for test 使用离线交易接口执行交易
 	// var pp httpservice.RawTransactionPayload
 	// pp.UserID = p.UserID
 	// pp.ChainType = p.ChainType
@@ -173,8 +173,8 @@ func TransactionIsMined(p httpservice.QueryTransactionPayload) (resp *httpservic
 	return
 }
 
-//BuyPoints 发送离线交易
-func BuyPoints(p httpservice.RawTransactionPayload) (string, error) {
+//BuyPointsOffline 发送离线交易
+func BuyPointsOffline(p httpservice.RawTransactionPayload) (string, error) {
 
 	// 获取节点连接
 	con := ConnectEthNodeForWeb3(p.ChainType)
@@ -191,3 +191,76 @@ func BuyPoints(p httpservice.RawTransactionPayload) (string, error) {
 
 	return txHash.String(), nil
 }
+
+/*
+//BuyPoints 购买积分
+func BuyPoints(p httpservice.BuyPointsPayload) (string, error) {
+
+	//解析参数, 得到购买的积分数量
+	a, err := math.ParseBig256(p.Amount)
+	if err == false {
+		return "", errors.New("invalid transfer amount")
+	}
+	amount := hexutil.Big(*a)
+
+	//设置gas和gaslimit
+	v, _ := math.ParseBig256(cmn.Config().GetString("ethereum.gas"))
+	gas := hexutil.Big(*v)
+
+	g, _ := math.ParseBig256(cmn.Config().GetString("ethereum.price"))
+	price := hexutil.Big(*g)
+
+	//查询用户的eth地址
+	userAddress, err2 := accounts.GetUserAddress(p.UserID)
+	if err2 != nil {
+		return "", errors.New("no such userID: " + p.UserID + ". err:" + err2.Error())
+	}
+	//连接到节点并获取nonce
+	con := ConnectEthNodeForWeb3(p.ChainType)
+	if con == nil {
+		return "", errors.New("no valid endpoint")
+	}
+	nonce, err3 := con.EthGetNonce(userAddress)
+	if err3 != nil {
+		return "", errors.New("get nounce fail addr: " + userAddress.Hex() + ". err:" + err3.Error())
+	}
+
+	transaction := &cmn.TransactionRequest{
+		From:     userAddress,
+		To:       ethcmn.HexToAddress(cmn.Config().GetString("ethereum.adminaccount")),
+		Gas:      &gas,
+		GasPrice: &price,
+		Value:    &amount,
+		Data:     *new(hexutil.Bytes),
+		Nonce:    nonce,
+	}
+	signedTx, err4 := accounts.SignTx(p.UserID, transaction)
+	if err4 != nil {
+		pretty.Println("\nsignedTx:", signedTx, "\nerror: ", err4, "\n")
+		return "", nil
+	}
+
+	// for test 使用离线交易接口执行交易
+	// var pp httpservice.RawTransactionPayload
+	// pp.UserID = p.UserID
+	// pp.ChainType = p.ChainType
+	// pp.SignedData = string(signedTx)
+	// return SendRawTransaction(pp)
+
+	txHash, err5 := con.EthSendRawTransaction(signedTx)
+	if err5 != nil {
+		pretty.Println("\ntxHash:", txHash.String(), "\nerror: ", err5, "\n")
+		return "", err5
+	}
+	var para = &PendingPoolParas{
+		ChainType: p.ChainType,
+		UserID:    p.UserID,
+		TxHash:    txHash,
+		From:      userAddress,
+		To:        transaction.To,
+		Nonce:     transaction.Nonce.ToInt().Uint64(),
+	}
+	AppendToPendingPool(para)
+	return txHash.String(), nil
+}
+*/

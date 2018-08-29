@@ -55,10 +55,19 @@ func (e *PendingTransactionManager) importAllPendingTransactions(chainName strin
 		currentPending = append(currentPending, item.TxHash)
 	}
 	e.currentPending[chainName] = currentPending
+
+	dbconn.Model(&db.PendingTransactionInfo{}).
+		Where("mined = ? and comfired < ? and chain_type = ?", true, cmn.Config().GetInt(chainName+".txcomfired"), chainName).Find(&ptInfo)
+
+	var waitComfired []Comfired
+	for _, item := range ptInfo {
+		waitComfired = append(waitComfired, Comfired{item.TxHash, item.MinedBlock})
+	}
+	e.waitComfired[chainName] = waitComfired
 }
 
 // 更新交易的状态 mined
-func (e *PendingTransactionManager) updateTransactionStatus(txHash string, status, success bool, minedblock uint64) error {
+func (e *PendingTransactionManager) updateTransactionStatus(txHash string, mined, success bool, minedblock uint64) error {
 	var ptInfo = &db.PendingTransactionInfo{}
 	dbconn := db.MysqlBegin()
 	defer dbconn.MysqlRollback()
@@ -69,19 +78,19 @@ func (e *PendingTransactionManager) updateTransactionStatus(txHash string, statu
 		cmn.Logger.Error(err)
 		return errors.New(err)
 	}
-	err := dbconn.Model(ptInfo).Update("mined", status).Update("success", success).Update("minedblock", minedblock).Error
+	err := dbconn.Model(ptInfo).Update("mined", mined).Update("success", success).Update("mined_block", minedblock).Error
 	if err != nil {
 		cmn.Logger.Error(err)
 		return err
 	}
 
-	cmn.Logger.Debugf("txHash %s update status to %v", txHash, status)
+	cmn.Logger.Debugf("txHash %s update mined: %v, success: %v", txHash, mined, success)
 	dbconn.MysqlCommit()
 	return nil
 }
 
 // 更新交易的确认数
-func (e *PendingTransactionManager) updateTransactionComfired(txHash string, comfired int) error {
+func (e *PendingTransactionManager) updateTransactionComfired(chainName string, txHash string, comfired int) error {
 	var ptInfo = &db.PendingTransactionInfo{}
 	dbconn := db.MysqlBegin()
 	defer dbconn.MysqlRollback()
@@ -98,7 +107,7 @@ func (e *PendingTransactionManager) updateTransactionComfired(txHash string, com
 		return err
 	}
 
-	cmn.Logger.Debugf("txHash %s update comfired block to %v", txHash, comfired)
+	cmn.Logger.Debugf("[%s]txHash %s comfired block %v/%v", chainName, txHash, comfired, cmn.Config().GetInt(chainName+".txcomfired"))
 	dbconn.MysqlCommit()
 	return nil
 }
@@ -147,7 +156,7 @@ func (e *PendingTransactionManager) watch(chainName string) {
 			cmn.Logger.Debug("query in [" + chainName + "] txhash: " + txHash + ". error :" + err.Error())
 			continue
 		}
-		cmn.Logger.Debugf("query %s transaction: %v\n", chainName, transaction)
+		//cmn.Logger.Debugf("query %s transaction: %v\n", chainName, transaction)
 		if transaction.BlockNumber != nil && transaction.BlockNumber.ToInt().Uint64() > 0 {
 			//检查交易是否成功
 			receipt, err := con.EthGetTransactionReceipt(ethcmn.HexToHash(txHash))
@@ -155,7 +164,7 @@ func (e *PendingTransactionManager) watch(chainName string) {
 				cmn.Logger.Debugf("query receipt in [%s] txhash: %s. error : %v", chainName, txHash, err.Error())
 				continue
 			}
-			cmn.Logger.Debugf("[poa]receipt.GasUsed=%v transaction.Gas=%v", receipt.GasUsed.ToInt().Uint64(), transaction.Gas.ToInt().Uint64())
+			//cmn.Logger.Debugf("[%s]receipt.GasUsed=%v transaction.Gas=%v", chainName,receipt.GasUsed.ToInt().Uint64(), transaction.Gas.ToInt().Uint64())
 			//交易成功的标志是status==1,或者消耗的gas小于设置的gaslimit
 			success := ((receipt.Status.ToInt().Uint64() == 1) ||
 				(receipt.GasUsed.ToInt().Uint64() < transaction.Gas.ToInt().Uint64()))
@@ -180,7 +189,7 @@ func (e *PendingTransactionManager) watch(chainName string) {
 			c = cmn.Config().GetInt(chainName + ".txcomfired")
 		}
 		//更新交易确认数到数据库
-		e.updateTransactionComfired(comfired.TxHash, c)
+		e.updateTransactionComfired(chainName, comfired.TxHash, c)
 	}
 	return
 }
@@ -208,7 +217,7 @@ func (e *PendingTransactionManager) StartListeningPending(chainType string, txHa
 
 // Run pending交易管理
 func (e *PendingTransactionManager) Run() {
-	ticker := time.NewTicker(time.Second * 3)
+	ticker := time.NewTicker(time.Second * 5)
 	defer ticker.Stop()
 
 	e.importAllPendingTransactions("ethereum")

@@ -92,6 +92,16 @@ type RawTransactionPayload struct {
 	ChainType  string `json:"chain_type" validate:"required,oneof=ethereum poa"`
 }
 
+//BuyPointsPayload 离线交易参数
+type BuyPointsPayload struct {
+	Sign       string `json:"sign" validate:"max=32"`    //签名
+	Atime      int64  `json:"atime" validate:"required"` //签名时间戳	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
+	VerifyCode string `json:"verify_code" validate:"required"`
+	UserID     string `json:"user_id" validate:"required"`
+	Amount     string `json:"amount" validate:"required"`
+	ChainType  string `json:"chain_type" validate:"required,oneof=ethereum poa"`
+}
+
 //QueryTransactionPayload 离线交易参数
 type QueryTransactionPayload struct {
 	Sign      string `json:"sign" validate:"max=32"`    //签名

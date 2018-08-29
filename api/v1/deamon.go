@@ -20,8 +20,9 @@ func UserTransferETH(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证
-	//
-	//
+	// if common.UserAuth(p.UserID) == false {
+	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
+	// }
 
 	txhash, err := eth.Transfer(p)
 	if err != nil {
@@ -40,8 +41,9 @@ func SendRawTransaction(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证
-	//
-	//
+	// if common.UserAuth(p.UserID) == false {
+	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
+	// }
 
 	txhash, err := eth.SendRawTransaction(p)
 	if err != nil {
@@ -60,8 +62,11 @@ func BuyPoints(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证
-	//
-	//
+	// if common.UserAuth(p.UserID) == false {
+	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
+	// }
+
+	//for test
 
 	_, err2 := accounts.GetUserAddress(p.UserID)
 	if err2 != nil {
@@ -85,7 +90,7 @@ func BuyPoints(c echo.Context) error {
 	}
 
 	//执行交易
-	txhash, err := eth.BuyPoints(p)
+	txhash, err := eth.BuyPointsOffline(p)
 	if err != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
 	}
@@ -101,7 +106,7 @@ func BuyPoints(c echo.Context) error {
 	}
 	eth.AppendToPendingPool(para)
 	//等待上链,如果执行成功, 则捕获buy事件,保存到数据库
-	go contracts.PollEventMint(p.ChainType, txhash, blockNum.ToInt().Uint64(), *from, *transaction.To())
+	go contracts.PollEventMint(p.ChainType, txhash, blockNum.ToInt().Uint64(), *transaction.To())
 
 	return httpservice.JSONReturns(c, txhash)
 }

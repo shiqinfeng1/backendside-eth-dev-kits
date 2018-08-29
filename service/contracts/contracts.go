@@ -112,7 +112,7 @@ func updateAddressToConfig(match, address string) {
 	return
 }
 func updatePointAddressToConfig(pointAddress string) {
-	updateAddressToConfig("pointaddress", pointAddress)
+	updateAddressToConfig("pointsaddress", pointAddress)
 }
 func updateOmcAddressToConfig(omcAddress string) {
 	updateAddressToConfig("omcaddress", omcAddress)
@@ -168,8 +168,9 @@ func DeployOMCToken(chainName, userID string, auth *bind.TransactOpts) (*ERC20.O
 		}
 		eth.AppendToPendingPool(para)
 		//等待交易上链
-		mined, success, timeout := waitMinedSync(txn.Hash().Hex())
-		cmn.Logger.Noticef("transaction: %v mined:%v success:%v timeout:%v", txn.Hash().Hex(), mined, success, timeout)
+		mined, success, timeout, minedBlock, comfired := waitMinedSync(txn.Hash().Hex())
+		cmn.Logger.Noticef("transaction: %v mined:%v success:%v timeout:%v minedBlock:%v, comfired:%v",
+			txn.Hash().Hex(), mined, success, timeout, minedBlock, comfired)
 	}
 
 	return token, err
@@ -219,6 +220,7 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 		return nil, err
 	}
 
+	//交易加入pending监听队列
 	var para = &eth.PendingPoolParas{
 		ChainType: chainName,
 		UserID:    userID,
@@ -229,8 +231,8 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 	}
 	eth.AppendToPendingPool(para)
 
-	//同步等待交易上链
-	PollEventTransfer(
+	//等待交易上链,并捕获Transfer事件
+	go PollEventTransfer(
 		chainName,
 		txn.Hash().Hex(),
 		blockNum.ToInt().Uint64(),
@@ -263,8 +265,9 @@ func PollEventTransfer(chainName, txHash string, startBlock uint64, from, to com
 		return
 	}
 	defer conn.Close()
-	mined, success, timeout := waitMinedSync(txHash)
-	cmn.Logger.Noticef("Transaction: %v Mined:%v Success:%v Timeout:%v", txHash, mined, success, timeout)
+	mined, success, timeout, minedBlock, comfired := waitMinedSync(txHash)
+	cmn.Logger.Noticef("Transaction: %v Mined:%v Success:%v Timeout:%v minedBlock:%v comfired:%v",
+		txHash, mined, success, timeout, minedBlock, comfired)
 
 	//如果交易失败,则不会有事件触发,无需监听
 	if success == true {
@@ -307,7 +310,7 @@ func DeployPointCoin(chainName, userID string, auth *bind.TransactOpts) (*ERC20.
 	cmn.PrintDeployContactInfo(addr, txn, err)
 	if err == nil {
 		//更新合约地址到配置文件, 这样下次启动后不会重复部署
-		updateOmcAddressToConfig(addr.Hex())
+		updatePointAddressToConfig(addr.Hex())
 		//将会交易加入监听池
 		var para = &eth.PendingPoolParas{
 			ChainType: chainName,
@@ -319,8 +322,9 @@ func DeployPointCoin(chainName, userID string, auth *bind.TransactOpts) (*ERC20.
 		}
 		eth.AppendToPendingPool(para)
 		//等待交易上链
-		mined, success, timeout := waitMinedSync(txn.Hash().Hex())
-		cmn.Logger.Noticef("[deploy points]transaction: %v mined:%v success:%v timeout:%v", txn.Hash().Hex(), mined, success, timeout)
+		mined, success, timeout, minedBlock, comfired := waitMinedSync(txn.Hash().Hex())
+		cmn.Logger.Noticef("[deploy points]transaction: %v mined:%v success:%v timeout:%v minedBlock:%v comfired:%v",
+			txn.Hash().Hex(), mined, success, timeout, minedBlock, comfired)
 	}
 
 	return points, err
@@ -339,16 +343,58 @@ func AttachPointCoin(chainName string) (*ERC20.PointCoin, *ethclient.Client, err
 	return points, client, err
 }
 
+// PointsBuy 执行buy
+func PointsBuy(chainName, userID string, auth *bind.TransactOpts, receiver string, amount uint64) (*types.Transaction, error) {
+
+	//执行交易之前获取blocknumber,监听事件时从该block开始检查
+	blockNum, err := eth.ConnectEthNodeForWeb3(chainName).EthBlockNumber()
+	if err != nil {
+		cmn.Logger.Errorf("Failed to EthBlockNumber: %v", err)
+		return nil, err
+	}
+	//关联合约
+	points, conn, err := AttachPointCoin(chainName)
+	if err != nil {
+		cmn.Logger.Errorf("Failed to AttachPointCoin: %v", err)
+		return nil, err
+	}
+	defer conn.Close()
+	cmn.Logger.Error("step1")
+	txn, err := points.Buy(auth, common.HexToAddress(receiver), big.NewInt(0).SetUint64(amount))
+	if err != nil {
+		cmn.Logger.Errorf("Failed to Buy points: %v", err)
+		return nil, err
+	}
+	cmn.Logger.Error("step2")
+	var para = &eth.PendingPoolParas{
+		ChainType: chainName,
+		UserID:    userID,
+		TxHash:    txn.Hash(),
+		From:      auth.From,
+		To:        *txn.To(),
+		Nonce:     txn.Nonce(),
+	}
+	eth.AppendToPendingPool(para)
+	//等待交易上链,并捕获Transfer事件
+	go PollEventMint(
+		chainName,
+		txn.Hash().Hex(),
+		blockNum.ToInt().Uint64(),
+		common.HexToAddress(receiver))
+	return txn, err
+}
+
 //PollEventMint 等待交易上链,如果执行成功,捕获Mint事件
-func PollEventMint(chainName, txHash string, startBlock uint64, from, to common.Address) {
+func PollEventMint(chainName, txHash string, startBlock uint64, to common.Address) {
 	points, conn, err := AttachPointCoin(chainName)
 	if err != nil {
 		cmn.Logger.Errorf("Failed to AttachPointCoin: %v", err)
 		return
 	}
 	defer conn.Close()
-	mined, success, timeout := waitMinedSync(txHash)
-	cmn.Logger.Noticef("Transaction: %v Mined:%v Success:%v Timeout:%v", txHash, mined, success, timeout)
+	mined, success, timeout, minedBlock, comfired := waitMinedSync(txHash)
+	cmn.Logger.Noticef("Transaction: %v Mined:%v Success:%v Timeout:%v minedBlock:%v comfired:%v",
+		txHash, mined, success, timeout, minedBlock, comfired)
 
 	//如果交易失败,则不会有事件触发,无需监听
 	if success == true {
@@ -367,7 +413,7 @@ func catchEventMint(points *ERC20.PointCoin, startBlock uint64, to []common.Addr
 	}
 	for history.Next() {
 		e := history.Event
-		cmn.Logger.Infof("%s buy points to %s value=%s, at %d", e.To.String(), e.Amount, e.Raw.BlockNumber)
+		cmn.Logger.Infof("%s buy points %v at block %d", e.To.String(), e.Amount, e.Raw.BlockNumber)
 	}
 }
 
