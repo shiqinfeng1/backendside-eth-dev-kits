@@ -6,9 +6,7 @@ import (
 	ethcmn "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kr/pretty"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
 	cmn "github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
@@ -111,7 +109,15 @@ func Transfer(p httpservice.TransferPayload) (string, error) {
 		pretty.Println("\ntxHash:", txHash.String(), "\nerror: ", err5, "\n")
 		return "", err5
 	}
-	AppendToPendingPool(p.ChainType, p.UserID, txHash, userAddress, transaction.To, transaction.Nonce.ToInt().Uint64())
+	var para = &PendingPoolParas{
+		ChainType: p.ChainType,
+		UserID:    p.UserID,
+		TxHash:    txHash,
+		From:      userAddress,
+		To:        transaction.To,
+		Nonce:     transaction.Nonce.ToInt().Uint64(),
+	}
+	AppendToPendingPool(para)
 	return txHash.String(), nil
 }
 
@@ -123,27 +129,65 @@ func SendRawTransaction(p httpservice.RawTransactionPayload) (string, error) {
 		return "", errors.New("no such userID: " + p.UserID + ". err:" + err2.Error())
 	}
 
+	// 获取节点连接
 	con := ConnectEthNodeForWeb3(p.ChainType)
 	if con == nil {
 		return "", errors.New("no valid endpoint")
 	}
 
+	// 发送离线交易
+	txHash, err5 := con.EthSendRawTransaction([]byte(p.SignedData))
+	if err5 != nil {
+		pretty.Println("\ntxHash:", txHash.String(), "\nerror: ", err5, "\n")
+		return "", err5
+	}
+	transaction, from, err := SignedDataToTransaction(p.SignedData)
+	if err != nil {
+		return ethcmn.Hash{}.String(), err
+	}
+	cmn.Logger.Debug("\nDecodeRLP \nsigner:", from, "\ntxhash:", txHash)
+	var para = &PendingPoolParas{
+		ChainType: p.ChainType,
+		UserID:    p.UserID,
+		TxHash:    txHash,
+		From:      *from,
+		To:        *transaction.To(),
+		Nonce:     transaction.Nonce(),
+	}
+	AppendToPendingPool(para)
+	return txHash.String(), nil
+}
+
+//TransactionIsMined 发送离线交易
+func TransactionIsMined(p httpservice.QueryTransactionPayload) (resp *httpservice.QueryTransactionReponse, err error) {
+
+	addr, err := accounts.GetUserAddress(p.UserID)
+	if err != nil {
+		return nil, errors.New("no such userID: " + p.UserID + ". err:" + err.Error())
+	}
+
+	resp.Mined, resp.Success, resp.MinedBlock, resp.Comfired, err = IsMined(p.TxHash)
+	if err != nil {
+		return nil, errors.New("addr: " + addr.String() + " txhash: " + p.TxHash + "check mined err:" + err.Error())
+	}
+	return
+}
+
+//BuyPoints 发送离线交易
+func BuyPoints(p httpservice.RawTransactionPayload) (string, error) {
+
+	// 获取节点连接
+	con := ConnectEthNodeForWeb3(p.ChainType)
+	if con == nil {
+		return "", errors.New("no valid endpoint")
+	}
+
+	// 发送离线交易
 	txHash, err5 := con.EthSendRawTransaction([]byte(p.SignedData))
 	if err5 != nil {
 		pretty.Println("\ntxHash:", txHash.String(), "\nerror: ", err5, "\n")
 		return "", err5
 	}
 
-	transaction := new(types.Transaction)
-	if err := rlp.DecodeBytes([]byte(p.SignedData), transaction); err != nil {
-		return ethcmn.Hash{}.String(), err
-	}
-	//pretty.Println("\nDecodeRLP transaction:\n", transaction)
-	from, err := types.Sender(types.HomesteadSigner{}, transaction)
-	if err != nil {
-		return ethcmn.Hash{}.String(), err
-	}
-	pretty.Println("\nDecodeRLP \nsigner:", from, "\ntxhash:", txHash)
-	AppendToPendingPool(p.ChainType, p.UserID, txHash, from, *transaction.To(), transaction.Nonce())
 	return txHash.String(), nil
 }

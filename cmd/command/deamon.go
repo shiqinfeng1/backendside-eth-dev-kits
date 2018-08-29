@@ -30,19 +30,24 @@ var daemonCmd = &cobra.Command{
 		go endpoints.NewEndPointsManager().Run()
 		go eth.NewPendingTransactionManager().Run()
 		accounts.NewRootHDWallet()
-		//for test
+
+		/*for test*****************/
 		accounts.NewAccount("15422339579")
 
 		if auth, err := contracts.GetUserAuth("15422339579"); err != nil {
 			common.Logger.Error("GetUserAuth: 15422339579 fail.")
 			return nil
-		} else {
-			if common.Config().GetString("ethereum.omcaddress") == "" {
-				contracts.DeployOMCToken("ethereum", "15422339579", auth)
-			}
-			contracts.OMCTokenTransfer("ethereum", "15422339579", auth, "0x1dcef12e93b0abf2d36f723e8b59cc762775d513", 100000)
+		}
+		if common.Config().GetString("ethereum.omcaddress") == "" {
+			contracts.DeployOMCToken("ethereum", "15422339579", auth)
+		}
+		if common.Config().GetString("poa.pointsaddress") == "" {
+			contracts.DeployPointCoin("poa", "15422339579", auth)
 		}
 
+		contracts.OMCTokenTransfer("ethereum", "15422339579", auth, "0x1dcef12e93b0abf2d36f723e8b59cc762775d513", 100000)
+
+		/**************************/
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {

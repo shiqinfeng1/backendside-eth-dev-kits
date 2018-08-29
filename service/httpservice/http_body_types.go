@@ -91,3 +91,20 @@ type RawTransactionPayload struct {
 	SignedData string `json:"signed_data" validate:"required"`
 	ChainType  string `json:"chain_type" validate:"required,oneof=ethereum poa"`
 }
+
+//QueryTransactionPayload 离线交易参数
+type QueryTransactionPayload struct {
+	Sign      string `json:"sign" validate:"max=32"`    //签名
+	Atime     int64  `json:"atime" validate:"required"` //签名时间戳	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
+	UserID    string `json:"user_id" validate:"required"`
+	TxHash    string `json:"tx_hash" validate:"required"`
+	ChainType string `json:"chain_type" validate:"required,oneof=ethereum poa"`
+}
+
+//QueryTransactionReponse 返回交易状态结构
+type QueryTransactionReponse struct {
+	Mined      bool   `json:"mined"`
+	Success    bool   `json:"success"`
+	MinedBlock uint64 `json:"mined_block"`
+	Comfired   int    `json:"comfired"`
+}

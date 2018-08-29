@@ -138,24 +138,6 @@ func GetUserAuthWithPassword(userAddr, pwd string) (*bind.TransactOpts, error) {
 	return auth, err
 }
 
-func waitMinedSync(txHash string) (bool, bool, bool) {
-	var count int
-	for {
-		time.Sleep(time.Second * 2)
-		if mined, success, err := eth.IsMined(txHash); err != nil {
-			cmn.Logger.Errorf("transaction %v is mined fail: %v", txHash, err)
-			return false, false, false
-		} else if mined == true {
-			return mined, success, false
-		}
-		count++
-		if count > cmn.Config().GetInt("ethereum.txtimeout")/2 {
-			break
-		}
-	}
-	return false, false, true
-}
-
 // DeployOMCToken 部署合约
 func DeployOMCToken(chainName, userID string, auth *bind.TransactOpts) (*ERC20.OMC, error) {
 
@@ -176,7 +158,15 @@ func DeployOMCToken(chainName, userID string, auth *bind.TransactOpts) (*ERC20.O
 		//更新合约地址到配置文件, 这样下次启动后不会重复部署
 		updateOmcAddressToConfig(addr.Hex())
 		//将会交易加入监听池
-		eth.AppendToPendingPool(chainName, userID, txn.Hash(), auth.From, common.Address{}, txn.Nonce())
+		var para = &eth.PendingPoolParas{
+			ChainType: chainName,
+			UserID:    userID,
+			TxHash:    txn.Hash(),
+			From:      auth.From,
+			To:        common.Address{},
+			Nonce:     txn.Nonce(),
+		}
+		eth.AppendToPendingPool(para)
 		//等待交易上链
 		mined, success, timeout := waitMinedSync(txn.Hash().Hex())
 		cmn.Logger.Noticef("transaction: %v mined:%v success:%v timeout:%v", txn.Hash().Hex(), mined, success, timeout)
@@ -191,24 +181,11 @@ func AttachOMCToken(chainName string) (*ERC20.OMC, *ethclient.Client, error) {
 	if client == nil {
 		return nil, nil, errors.New("no eth client")
 	}
-	token, err := ERC20.NewOMC(common.HexToAddress(cmn.Config().GetString("ethereum.omcaddress")), client)
+	token, err := ERC20.NewOMC(common.HexToAddress(cmn.Config().GetString(chainName+".omcaddress")), client)
 	if err != nil {
 		cmn.Logger.Errorf("Failed to instantiate a Token contract: %v", err)
 	}
 	return token, client, err
-}
-
-func catchEventTransfer(omc *ERC20.OMC, startBlock uint64, from, to []common.Address) {
-	//TODO: 记录捕获Transfer事件
-	history, err := omc.FilterTransfer(&bind.FilterOpts{Start: startBlock}, from, to)
-	if err != nil {
-		cmn.Logger.Errorf("fail to FilterTransfer: %v", err)
-		return
-	}
-	for history.Next() {
-		e := history.Event
-		cmn.Logger.Infof("%s transfer to %s value=%s, at %d", e.From.String(), e.To.String(), e.Value, e.Raw.BlockNumber)
-	}
 }
 
 // OMCTokenTransfer 执行transfer
@@ -227,9 +204,9 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 		return nil, err
 	}
 	// cmn.Logger.Infof("balance:%v", nb)
-	// 手动指定gaslimit和gasprice 如果不指定gas, 后面不好判断交易是否成功
-	gas, _ := math.ParseBig256(cmn.Config().GetString("ethereum.gas"))
-	auth.GasLimit = gas.Uint64()
+	// 手动指定gaslimit和gasprice
+	// gas, _ := math.ParseBig256(cmn.Config().GetString("ethereum.gas"))
+	// auth.GasLimit = gas.Uint64()
 	omc, conn, err := AttachOMCToken(chainName)
 	if err != nil {
 		cmn.Logger.Errorf("Failed to AttachOMCToken: %v", err)
@@ -242,18 +219,22 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 		return nil, err
 	}
 
-	eth.AppendToPendingPool(chainName, userID, txn.Hash(), auth.From, *txn.To(), txn.Nonce())
-	mined, success, timeout := waitMinedSync(txn.Hash().Hex())
-	cmn.Logger.Noticef("Transaction: %v Mined:%v Success:%v Timeout:%v", txn.Hash().Hex(), mined, success, timeout)
-
-	//如果交易失败,则不会有事件触发,无需监听
-	if success == true {
-		catchEventTransfer(
-			omc,
-			blockNum.ToInt().Uint64(),
-			[]common.Address{auth.From},
-			[]common.Address{common.HexToAddress(receiver)})
+	var para = &eth.PendingPoolParas{
+		ChainType: chainName,
+		UserID:    userID,
+		TxHash:    txn.Hash(),
+		From:      auth.From,
+		To:        *txn.To(),
+		Nonce:     txn.Nonce(),
 	}
+	eth.AppendToPendingPool(para)
+
+	//同步等待交易上链
+	PollEventTransfer(
+		chainName,
+		txn.Hash().Hex(),
+		blockNum.ToInt().Uint64(),
+		auth.From, common.HexToAddress(receiver))
 
 	return txn, err
 }
@@ -272,4 +253,142 @@ func OMCTokenBalanceOf(chainName string, addr common.Address) (*big.Int, error) 
 		return nil, err
 	}
 	return balance, err
+}
+
+//PollEventTransfer 等待交易上链,如果执行成功,捕获Transfer事件
+func PollEventTransfer(chainName, txHash string, startBlock uint64, from, to common.Address) {
+	omc, conn, err := AttachOMCToken(chainName)
+	if err != nil {
+		cmn.Logger.Errorf("Failed to AttachOMCToken: %v", err)
+		return
+	}
+	defer conn.Close()
+	mined, success, timeout := waitMinedSync(txHash)
+	cmn.Logger.Noticef("Transaction: %v Mined:%v Success:%v Timeout:%v", txHash, mined, success, timeout)
+
+	//如果交易失败,则不会有事件触发,无需监听
+	if success == true {
+		catchEventTransfer(
+			omc,
+			startBlock,
+			[]common.Address{from},
+			[]common.Address{to})
+	}
+}
+
+func catchEventTransfer(omc *ERC20.OMC, startBlock uint64, from, to []common.Address) {
+	//TODO: 记录捕获Transfer事件
+	history, err := omc.FilterTransfer(&bind.FilterOpts{Start: startBlock}, from, to)
+	if err != nil {
+		cmn.Logger.Errorf("fail to FilterTransfer: %v", err)
+		return
+	}
+	for history.Next() {
+		e := history.Event
+		cmn.Logger.Infof("%s transfer to %s value=%s, at %d", e.From.String(), e.To.String(), e.Value, e.Raw.BlockNumber)
+	}
+}
+
+// DeployPointCoin 部署合约
+func DeployPointCoin(chainName, userID string, auth *bind.TransactOpts) (*ERC20.PointCoin, error) {
+
+	//设置gaslimit 和 gasgprice
+	v, _ := math.ParseBig256(cmn.Config().GetString("ethereum.gas"))
+	gas := v.Uint64() * 20
+	g, _ := math.ParseBig256(cmn.Config().GetString("ethereum.price"))
+	price := hexutil.Big(*g)
+	auth.GasPrice = price.ToInt()
+	auth.GasLimit = gas
+
+	//部署合约
+	client := eth.ConnectEthNodeForContract(chainName)
+	addr, txn, points, err := ERC20.DeployPointCoin(auth, client)
+	//dump部署信息
+	cmn.PrintDeployContactInfo(addr, txn, err)
+	if err == nil {
+		//更新合约地址到配置文件, 这样下次启动后不会重复部署
+		updateOmcAddressToConfig(addr.Hex())
+		//将会交易加入监听池
+		var para = &eth.PendingPoolParas{
+			ChainType: chainName,
+			UserID:    userID,
+			TxHash:    txn.Hash(),
+			From:      auth.From,
+			To:        common.Address{},
+			Nonce:     txn.Nonce(),
+		}
+		eth.AppendToPendingPool(para)
+		//等待交易上链
+		mined, success, timeout := waitMinedSync(txn.Hash().Hex())
+		cmn.Logger.Noticef("[deploy points]transaction: %v mined:%v success:%v timeout:%v", txn.Hash().Hex(), mined, success, timeout)
+	}
+
+	return points, err
+}
+
+// AttachPointCoin 关联合约
+func AttachPointCoin(chainName string) (*ERC20.PointCoin, *ethclient.Client, error) {
+	client := eth.ConnectEthNodeForContract(chainName)
+	if client == nil {
+		return nil, nil, errors.New("no eth client")
+	}
+	points, err := ERC20.NewPointCoin(common.HexToAddress(cmn.Config().GetString(chainName+".pointsaddress")), client)
+	if err != nil {
+		cmn.Logger.Errorf("Failed to instantiate a Token contract: %v", err)
+	}
+	return points, client, err
+}
+
+//PollEventMint 等待交易上链,如果执行成功,捕获Mint事件
+func PollEventMint(chainName, txHash string, startBlock uint64, from, to common.Address) {
+	points, conn, err := AttachPointCoin(chainName)
+	if err != nil {
+		cmn.Logger.Errorf("Failed to AttachPointCoin: %v", err)
+		return
+	}
+	defer conn.Close()
+	mined, success, timeout := waitMinedSync(txHash)
+	cmn.Logger.Noticef("Transaction: %v Mined:%v Success:%v Timeout:%v", txHash, mined, success, timeout)
+
+	//如果交易失败,则不会有事件触发,无需监听
+	if success == true {
+		catchEventMint(
+			points,
+			startBlock,
+			[]common.Address{to})
+	}
+}
+func catchEventMint(points *ERC20.PointCoin, startBlock uint64, to []common.Address) {
+	//TODO: 记录捕获Transfer事件
+	history, err := points.FilterMint(&bind.FilterOpts{Start: startBlock}, to)
+	if err != nil {
+		cmn.Logger.Errorf("fail to FilterTransfer: %v", err)
+		return
+	}
+	for history.Next() {
+		e := history.Event
+		cmn.Logger.Infof("%s buy points to %s value=%s, at %d", e.To.String(), e.Amount, e.Raw.BlockNumber)
+	}
+}
+
+func waitMinedSync(txHash string) (mined bool, success bool, timeout bool, minedBlock uint64, comfired int) {
+	var count int
+	var err error
+	timeout = false
+	for {
+		time.Sleep(time.Second * 2)
+		if mined, success, minedBlock, comfired, err = eth.IsMined(txHash); err != nil {
+			cmn.Logger.Errorf("transaction %v is mined fail: %v", txHash, err)
+			return
+		}
+		if mined == true {
+			return
+		}
+		count++
+		if count > cmn.Config().GetInt("ethereum.txtimeout")/2 {
+			break
+		}
+	}
+	timeout = true
+	return
 }

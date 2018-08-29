@@ -1,5 +1,9 @@
 package eth
 
+import (
+	ethcmn "github.com/ethereum/go-ethereum/common"
+)
+
 //ErrorMsgReponse 消息错误格式
 type ErrorMsgReponse struct {
 	Error    int32  `json:"error"`     //  错误码 32	not nil 	0:代表成功,其它:代表异常
@@ -20,4 +24,14 @@ type UserLoginRequest struct {
 //UserLoginReponse 春雨用户登录相应消息格式
 type UserLoginReponse struct {
 	ErrorMsgReponse
+}
+
+//PendingPoolParas pendingpool的输入参数
+type PendingPoolParas struct {
+	ChainType string
+	UserID    string
+	TxHash    ethcmn.Hash
+	From      ethcmn.Address
+	To        ethcmn.Address
+	Nonce     uint64
 }

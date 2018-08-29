@@ -53,10 +53,10 @@ func LoggerInit(debuglevel string) {
 	//设置log后端
 	logging.SetBackend(backend1Formatter, backend2Formatter)
 
-	Logger.Debug("this is debug msg demo")
-	Logger.Info("this is info msg demo")
-	Logger.Warning("this is warn msg demo")
-	Logger.Error("this is error msg demo")
+	Logger.Debug("this is **DEBUG** msg demo")
+	Logger.Info("this is **INFO** msg demo")
+	Logger.Warning("this is **WARN** msg demo")
+	Logger.Error("this is **ERROR** msg demo")
 }
 
 //PrintDeployContactInfo 打印部署合约的信息

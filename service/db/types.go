@@ -31,6 +31,8 @@ type PendingTransactionInfo struct {
 	Nonce           uint64 `gorm:"not null"`
 	Mined           bool   `gorm:"not null"`
 	Success         bool   `gorm:"not null"`
+	MinedBlock      uint64 `gorm:"not null"`
+	Comfired        int    `gorm:"not null"`
 	ListenTimeout   bool   `gorm:"not null"`
 	ListenTimeoutAt time.Time
 }
