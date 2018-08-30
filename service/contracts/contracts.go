@@ -322,9 +322,7 @@ func DeployPointCoin(chainName, userID string, auth *bind.TransactOpts) (*ERC20.
 		}
 		eth.AppendToPendingPool(para)
 		//等待交易上链
-		mined, success, timeout, minedBlock, comfired := waitMinedSync(txn.Hash().Hex())
-		cmn.Logger.Noticef("[deploy points]transaction: %v mined:%v success:%v timeout:%v minedBlock:%v comfired:%v",
-			txn.Hash().Hex(), mined, success, timeout, minedBlock, comfired)
+		waitMinedSync(txn.Hash().Hex())
 	}
 
 	return points, err
@@ -392,9 +390,7 @@ func PollEventMint(chainName, txHash string, startBlock uint64, to common.Addres
 		return
 	}
 	defer conn.Close()
-	mined, success, timeout, minedBlock, comfired := waitMinedSync(txHash)
-	cmn.Logger.Noticef("Transaction: %v Mined:%v Success:%v Timeout:%v minedBlock:%v comfired:%v",
-		txHash, mined, success, timeout, minedBlock, comfired)
+	_, success, _, _, _ := waitMinedSync(txHash)
 
 	//如果交易失败,则不会有事件触发,无需监听
 	if success == true {
@@ -408,19 +404,50 @@ func catchEventMint(points *ERC20.PointCoin, startBlock uint64, to []common.Addr
 	//TODO: 记录捕获Transfer事件
 	history, err := points.FilterMint(&bind.FilterOpts{Start: startBlock}, to)
 	if err != nil {
-		cmn.Logger.Errorf("fail to FilterTransfer: %v", err)
+		cmn.Logger.Errorf("fail to FilterMint: %v", err)
 		return
 	}
 	for history.Next() {
 		e := history.Event
-		cmn.Logger.Infof("%s buy points %v at block %d", e.To.String(), e.Amount, e.Raw.BlockNumber)
+		cmn.Logger.Infof("%s Buy Points %v at block %d", e.To.String(), e.Amount, e.Raw.BlockNumber)
 	}
 }
 
+//PollEventBurn 等待交易上链,如果执行成功,捕获Burn事件
+func PollEventBurn(chainName, txHash string, startBlock uint64, burner common.Address) {
+	points, conn, err := AttachPointCoin(chainName)
+	if err != nil {
+		cmn.Logger.Errorf("Failed to AttachPointCoin: %v", err)
+		return
+	}
+	defer conn.Close()
+	_, success, _, _, _ := waitMinedSync(txHash)
+	//如果交易失败,则不会有事件触发,无需监听
+	if success == true {
+		catchEventBurn(
+			points,
+			startBlock,
+			[]common.Address{burner})
+	}
+}
+func catchEventBurn(points *ERC20.PointCoin, startBlock uint64, burner []common.Address) {
+	//TODO: 记录捕获Transfer事件
+	history, err := points.FilterBurn(&bind.FilterOpts{Start: startBlock}, burner)
+	if err != nil {
+		cmn.Logger.Errorf("fail to FilterBurn: %v", err)
+		return
+	}
+	for history.Next() {
+		e := history.Event
+		cmn.Logger.Infof("%s Burn Points %v at block %d", e.Burner.String(), e.Value, e.Raw.BlockNumber)
+	}
+}
 func waitMinedSync(txHash string) (mined bool, success bool, timeout bool, minedBlock uint64, comfired int) {
 	var count int
 	var err error
 	timeout = false
+	defer cmn.Logger.Noticef("Pending Txn Status: %v Mined:%v Success:%v Timeout:%v minedBlock:%v comfired:%v",
+		txHash, mined, success, timeout, minedBlock, comfired)
 	for {
 		time.Sleep(time.Second * 2)
 		if mined, success, minedBlock, comfired, err = eth.IsMined(txHash); err != nil {

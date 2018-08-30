@@ -115,15 +115,10 @@ func PraseBuyPoints(txn *types.Transaction) (*[]string, error) {
 // from to value
 func PraseConsumePoints(txn *types.Transaction) (*[]string, error) {
 
-	var functionCall = make([]string, 3)
+	var functionCall = make([]string, 2)
 
-	if len(txn.Data()) != ERC20TransferLength {
-		common.Logger.Debugf("transaction input:%v is not buypoints call.", string(txn.Data()))
-		return nil, errors.New("not a buypoints transaction:length mismatch")
-	}
-	r := strings.HasPrefix(string(txn.Data()), HexPrefix+ERC20MethodTransfer)
-	if r == false {
-		return nil, errors.New("not a buypoints transaction:functionName mismatch")
+	if ok, err := checkInputData(txn.Data(), PointsConsumePointsLength, PointsMethodConsumePoints); ok == false {
+		return nil, err
 	}
 	// 恢复得到交易签名者
 	from, err := getSinger(txn)
@@ -131,11 +126,28 @@ func PraseConsumePoints(txn *types.Transaction) (*[]string, error) {
 		return nil, err
 	}
 	functionCall[0] = from.String()
-	functionCall[1] = HexPrefix + string(txn.Data()[34:74])
-
-	i256, ok := math.ParseBig256(HexPrefix + truncationZero(string(txn.Data()[74:])))
+	i256, ok := math.ParseBig256(HexPrefix + truncationZero(string(txn.Data()[10:])))
 	if ok {
-		functionCall[2] = i256.Text(10)
+		functionCall[1] = i256.Text(10)
 	}
+	return &functionCall, nil
+}
+
+// PraseRefundPoints 消费积分
+// from to value
+func PraseRefundPoints(txn *types.Transaction) (*[]string, error) {
+
+	var functionCall = make([]string, 1)
+
+	if ok, err := checkInputData(txn.Data(), PointsRefundPointsLength, PointsMethodRefundPoints); ok == false {
+		return nil, err
+	}
+	// 恢复得到交易签名者
+	from, err := getSinger(txn)
+	if err != nil {
+		return nil, err
+	}
+	functionCall[0] = from.String()
+
 	return &functionCall, nil
 }

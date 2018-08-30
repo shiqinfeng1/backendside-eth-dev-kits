@@ -8,10 +8,18 @@ const (
 	ERC20MethodTransfer = "a9059cbb"
 	// ERC20TransferLength erc20方法transfer输入长度
 	ERC20TransferLength = 138
-	// PointsMethodBuyPoints BuyPoints abi的hash
-	PointsMethodBuyPoints = "a9059cbb"
+	// PointsMethodBuyPoints BuyPoints
+	PointsMethodBuyPoints = ""
 	// PointsBuyPointsLength 方法输入数据长度
 	PointsBuyPointsLength = 138
+	// PointsMethodConsumePoints ConsumePoints
+	PointsMethodConsumePoints = ""
+	// PointsConsumePointsLength 方法输入数据长度
+	PointsConsumePointsLength = 74
+	// PointsMethodRefundPoints RefundPoints
+	PointsMethodRefundPoints = ""
+	// PointsRefundPointsLength 方法输入数据长度
+	PointsRefundPointsLength = 10
 
 	// ERC20Name erc20 name 的16进制字符串
 	ERC20Name = "0x06fdde03"
