@@ -35,3 +35,9 @@ type PendingPoolParas struct {
 	To        ethcmn.Address
 	Nonce     uint64
 }
+
+//RawData 离线交易参数
+type RawData struct {
+	SignedData string
+	ChainType  string
+}

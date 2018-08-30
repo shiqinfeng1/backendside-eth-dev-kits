@@ -129,17 +129,11 @@ func SendRawTransaction(p httpservice.RawTransactionPayload) (string, error) {
 		return "", errors.New("no such userID: " + p.UserID + ". err:" + err2.Error())
 	}
 
-	// 获取节点连接
-	con := ConnectEthNodeForWeb3(p.ChainType)
-	if con == nil {
-		return "", errors.New("no valid endpoint")
-	}
-
-	// 发送离线交易
-	txHash, err5 := con.EthSendRawTransaction([]byte(p.SignedData))
-	if err5 != nil {
-		pretty.Println("\ntxHash:", txHash.String(), "\nerror: ", err5, "\n")
-		return "", err5
+	var raw = &RawData{SignedData: p.SignedData, ChainType: p.ChainType}
+	txHash, _, err := SendRawTxn(raw)
+	if err != nil {
+		pretty.Println("\ntxHash:", txHash, "\nerror: ", err, "\n")
+		return "", err
 	}
 	transaction, from, err := SignedDataToTransaction(p.SignedData)
 	if err != nil {
@@ -149,13 +143,13 @@ func SendRawTransaction(p httpservice.RawTransactionPayload) (string, error) {
 	var para = &PendingPoolParas{
 		ChainType: p.ChainType,
 		UserID:    p.UserID,
-		TxHash:    txHash,
+		TxHash:    ethcmn.HexToHash(txHash),
 		From:      *from,
 		To:        *transaction.To(),
 		Nonce:     transaction.Nonce(),
 	}
 	AppendToPendingPool(para)
-	return txHash.String(), nil
+	return txHash, nil
 }
 
 //TransactionIsMined 发送离线交易
@@ -173,27 +167,32 @@ func TransactionIsMined(p httpservice.QueryTransactionPayload) (resp *httpservic
 	return
 }
 
-//BuyPointsOffline 发送离线交易
-func BuyPointsOffline(p httpservice.RawTransactionPayload) (string, error) {
+//SendRawTxn 发送离线交易
+func SendRawTxn(p *RawData) (string, *hexutil.Big, error) {
 
 	// 获取节点连接
 	con := ConnectEthNodeForWeb3(p.ChainType)
 	if con == nil {
-		return "", errors.New("no valid endpoint")
+		return "", nil, errors.New("no valid endpoint")
 	}
-
+	// 执行交易之前获取blocknumber,监听事件时从该block开始检查
+	blockNum, err := con.EthBlockNumber()
+	if err != nil {
+		cmn.Logger.Errorf("Failed to EthBlockNumber: %v", err)
+		return "", nil, err
+	}
 	// 发送离线交易
 	txHash, err5 := con.EthSendRawTransaction([]byte(p.SignedData))
 	if err5 != nil {
-		pretty.Println("\ntxHash:", txHash.String(), "\nerror: ", err5, "\n")
-		return "", err5
+		cmn.Logger.Error("\ntxHash:", txHash.String(), "\nerror: ", err5, "\n")
+		return "", nil, err5
 	}
 
-	return txHash.String(), nil
+	return txHash.String(), blockNum, nil
 }
 
 /*
-//BuyPoints 购买积分
+//BuyPoints 消费积分
 func BuyPoints(p httpservice.BuyPointsPayload) (string, error) {
 
 	//解析参数, 得到购买的积分数量

@@ -40,22 +40,39 @@ func truncationZero(str string) string {
 
 }
 
+func getSinger(txn *types.Transaction) (ethcmn.Address, error) {
+	from, err := types.Sender(types.HomesteadSigner{}, txn)
+	if err != nil {
+		return ethcmn.Address{}, err
+	}
+	return from, nil
+}
+
+func checkInputData(input []byte, length int, funcHash string) (bool, error) {
+	if len(input) < length {
+		common.Logger.Errorf("transaction input length:%d mismatch. expect:%d", len(input), length)
+		return false, errors.New("contract function call input length mismatch")
+	}
+	r := strings.HasPrefix(string(input), HexPrefix+funcHash)
+	if r == false {
+		common.Logger.Errorf("transaction input functionName:%s mismatch. expect:%s", string(input)[2:6], funcHash)
+		return false, errors.New("contract function call funcHash mismatch")
+	}
+	return true, nil
+}
+
 // PraseERC20Transfer generate erc20 txn
 // from to value
 func PraseERC20Transfer(txn *types.Transaction) (*[]string, error) {
 
 	var functionCall = make([]string, 3)
 
-	if len(txn.Data()) < ERC20TransferLength {
-		common.Logger.Debugf("transaction input:%v is not Transfer call.", txn.Data())
-		return nil, errors.New("not a erc20 Transfer transaction:length mismatch")
+	if ok, err := checkInputData(txn.Data(), ERC20TransferLength, ERC20MethodTransfer); ok == false {
+		return nil, err
 	}
-	r := strings.HasPrefix(string(txn.Data()), HexPrefix+ERC20MethodTransfer)
-	if r == false {
-		return nil, errors.New("not a erc20 Transfer transaction:functionName mismatch")
-	}
+
 	// 恢复得到交易签名者
-	from, err := types.Sender(types.HomesteadSigner{}, txn)
+	from, err := getSinger(txn)
 	if err != nil {
 		return nil, err
 	}
@@ -75,6 +92,31 @@ func PraseBuyPoints(txn *types.Transaction) (*[]string, error) {
 
 	var functionCall = make([]string, 3)
 
+	//检查输入数据的合法性
+	if ok, err := checkInputData(txn.Data(), PointsBuyPointsLength, PointsMethodBuyPoints); ok == false {
+		return nil, err
+	}
+	// 恢复得到交易签名者
+	from, err := getSinger(txn)
+	if err != nil {
+		return nil, err
+	}
+	functionCall[0] = from.String()
+	functionCall[1] = HexPrefix + string(txn.Data()[34:74])
+
+	i256, ok := math.ParseBig256(HexPrefix + truncationZero(string(txn.Data()[74:])))
+	if ok {
+		functionCall[2] = i256.Text(10)
+	}
+	return &functionCall, nil
+}
+
+// PraseConsumePoints 消费积分
+// from to value
+func PraseConsumePoints(txn *types.Transaction) (*[]string, error) {
+
+	var functionCall = make([]string, 3)
+
 	if len(txn.Data()) != ERC20TransferLength {
 		common.Logger.Debugf("transaction input:%v is not buypoints call.", string(txn.Data()))
 		return nil, errors.New("not a buypoints transaction:length mismatch")
@@ -84,7 +126,7 @@ func PraseBuyPoints(txn *types.Transaction) (*[]string, error) {
 		return nil, errors.New("not a buypoints transaction:functionName mismatch")
 	}
 	// 恢复得到交易签名者
-	from, err := types.Sender(types.HomesteadSigner{}, txn)
+	from, err := getSinger(txn)
 	if err != nil {
 		return nil, err
 	}

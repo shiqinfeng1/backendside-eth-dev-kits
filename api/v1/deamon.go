@@ -4,7 +4,6 @@ import (
 	ethcmn "github.com/ethereum/go-ethereum/common"
 	"github.com/labstack/echo"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
-	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/contracts"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/eth"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/httpservice"
@@ -52,8 +51,8 @@ func SendRawTransaction(c echo.Context) error {
 	return httpservice.JSONReturns(c, txhash)
 }
 
-//BuyPoints : 发送离线交易 购买积分
-func BuyPoints(c echo.Context) error {
+//ConsumePoints : 发送离线交易 购买积分, 该交易需要管理员账户签署
+func ConsumePoints(c echo.Context) error {
 	p := httpservice.RawTransactionPayload{}
 	if err := c.Bind(&p); err != nil {
 		return err
@@ -66,8 +65,7 @@ func BuyPoints(c echo.Context) error {
 	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
 	// }
 
-	//for test
-
+	//检查购买积分用户的合法性
 	_, err2 := accounts.GetUserAddress(p.UserID)
 	if err2 != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "no such userID: "+p.UserID+". err:"+err2.Error())
@@ -82,15 +80,10 @@ func BuyPoints(c echo.Context) error {
 	if err != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
 	}
-	// 执行交易之前获取blocknumber,监听事件时从该block开始检查
-	blockNum, err := eth.ConnectEthNodeForWeb3(p.ChainType).EthBlockNumber()
-	if err != nil {
-		common.Logger.Errorf("Failed to EthBlockNumber: %v", err)
-		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
-	}
 
 	//执行交易
-	txhash, err := eth.BuyPointsOffline(p)
+	var raw = &eth.RawData{SignedData: p.SignedData, ChainType: p.ChainType}
+	txhash, blockNum, err := eth.SendRawTxn(raw)
 	if err != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
 	}
