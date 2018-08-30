@@ -19,7 +19,7 @@ ethereum:
     - http://18.222.179.249:21024
     - http://18.222.179.249:21024
   adminaccount: 0x1dcef12e93b0abf2d36f723e8b59cc762775d513
-  omcaddress: 
+  omcaddress: 0x174B214875015221f3837C4f68A7b888D0d7Cc4A
   gas: 100000  # 10万
   price: 30000000000  # 30GWei
   txtimeout: 600  #10分钟

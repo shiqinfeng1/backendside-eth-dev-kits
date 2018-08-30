@@ -141,6 +141,7 @@ func GetUserAuthWithPassword(userAddr, pwd string) (*bind.TransactOpts, error) {
 // DeployOMCToken 部署合约
 func DeployOMCToken(chainName, userID string, auth *bind.TransactOpts) (*ERC20.OMC, error) {
 
+	cmn.Logger.Debugf("[DeployOMCToken] chainName:%v userID: %v", chainName, userID)
 	//设置gaslimit 和 gasgprice
 	v, _ := math.ParseBig256(cmn.Config().GetString("ethereum.gas"))
 	gas := v.Uint64() * 20
@@ -168,9 +169,7 @@ func DeployOMCToken(chainName, userID string, auth *bind.TransactOpts) (*ERC20.O
 		}
 		eth.AppendToPendingPool(para)
 		//等待交易上链
-		mined, success, timeout, minedBlock, comfired := waitMinedSync(txn.Hash().Hex())
-		cmn.Logger.Noticef("transaction: %v mined:%v success:%v timeout:%v minedBlock:%v, comfired:%v",
-			txn.Hash().Hex(), mined, success, timeout, minedBlock, comfired)
+		waitMinedSync(txn.Hash().Hex())
 	}
 
 	return token, err
@@ -192,6 +191,7 @@ func AttachOMCToken(chainName string) (*ERC20.OMC, *ethclient.Client, error) {
 // OMCTokenTransfer 执行transfer
 func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receiver string, amount uint64) (*types.Transaction, error) {
 
+	cmn.Logger.Debugf("[OMCTokenTransfer] chainName:%v userID: %v receiver:%v amount:%v", chainName, userID, receiver, amount)
 	//执行交易之前获取blocknumber,监听事件时从该block开始检查
 	blockNum, err := eth.ConnectEthNodeForWeb3(chainName).EthBlockNumber()
 	if err != nil {
@@ -265,9 +265,7 @@ func PollEventTransfer(chainName, txHash string, startBlock uint64, from, to com
 		return
 	}
 	defer conn.Close()
-	mined, success, timeout, minedBlock, comfired := waitMinedSync(txHash)
-	cmn.Logger.Noticef("Transaction: %v Mined:%v Success:%v Timeout:%v minedBlock:%v comfired:%v",
-		txHash, mined, success, timeout, minedBlock, comfired)
+	_, success, _, _, _ := waitMinedSync(txHash)
 
 	//如果交易失败,则不会有事件触发,无需监听
 	if success == true {
@@ -295,6 +293,7 @@ func catchEventTransfer(omc *ERC20.OMC, startBlock uint64, from, to []common.Add
 // DeployPointCoin 部署合约
 func DeployPointCoin(chainName, userID string, auth *bind.TransactOpts) (*ERC20.PointCoin, error) {
 
+	cmn.Logger.Debugf("[DeployPointCoin] chainName:%v userID: %v", chainName, userID)
 	//设置gaslimit 和 gasgprice
 	v, _ := math.ParseBig256(cmn.Config().GetString("ethereum.gas"))
 	gas := v.Uint64() * 20
@@ -344,6 +343,7 @@ func AttachPointCoin(chainName string) (*ERC20.PointCoin, *ethclient.Client, err
 // PointsBuy 执行buy
 func PointsBuy(chainName, userID string, auth *bind.TransactOpts, receiver string, amount uint64) (*types.Transaction, error) {
 
+	cmn.Logger.Debugf("[PointsBuy] chainName:%v userID: %v receiver:%v amount:%v", chainName, userID, receiver, amount)
 	//执行交易之前获取blocknumber,监听事件时从该block开始检查
 	blockNum, err := eth.ConnectEthNodeForWeb3(chainName).EthBlockNumber()
 	if err != nil {
@@ -357,13 +357,11 @@ func PointsBuy(chainName, userID string, auth *bind.TransactOpts, receiver strin
 		return nil, err
 	}
 	defer conn.Close()
-	cmn.Logger.Error("step1")
 	txn, err := points.Buy(auth, common.HexToAddress(receiver), big.NewInt(0).SetUint64(amount))
 	if err != nil {
 		cmn.Logger.Errorf("Failed to Buy points: %v", err)
 		return nil, err
 	}
-	cmn.Logger.Error("step2")
 	var para = &eth.PendingPoolParas{
 		ChainType: chainName,
 		UserID:    userID,
@@ -446,12 +444,14 @@ func waitMinedSync(txHash string) (mined bool, success bool, timeout bool, mined
 	var count int
 	var err error
 	timeout = false
-	defer cmn.Logger.Noticef("Pending Txn Status: %v Mined:%v Success:%v Timeout:%v minedBlock:%v comfired:%v",
-		txHash, mined, success, timeout, minedBlock, comfired)
+	defer func() {
+		cmn.Logger.Noticef("[waitMinedSync]Pending Txn: %v Status: Mined:%v Success:%v Timeout:%v minedBlock:%v comfired:%v",
+			txHash, mined, success, timeout, minedBlock, comfired)
+	}()
 	for {
 		time.Sleep(time.Second * 2)
 		if mined, success, minedBlock, comfired, err = eth.IsMined(txHash); err != nil {
-			cmn.Logger.Errorf("transaction %v is mined fail: %v", txHash, err)
+			cmn.Logger.Errorf("[waitMinedSync]transaction %v is mined fail: %v", txHash, err)
 			return
 		}
 		if mined == true {

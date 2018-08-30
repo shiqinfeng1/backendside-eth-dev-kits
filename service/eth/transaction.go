@@ -84,7 +84,7 @@ func (e *PendingTransactionManager) updateTransactionStatus(txHash string, mined
 		return err
 	}
 
-	cmn.Logger.Debugf("txHash %s update mined: %v, success: %v", txHash, mined, success)
+	cmn.Logger.Debugf("[PendingManager]txHash=%s Mined=%v, Success=%v", txHash, mined, success)
 	dbconn.MysqlCommit()
 	return nil
 }

@@ -72,43 +72,44 @@ func ErrorReturnsStruct(c echo.Context, errcode string, msg string) *ReturnBody 
 	return returns
 }
 
-//TransferPayload 转账原生币参数
-type TransferPayload struct {
+//UserAuthPayload 转账原生币参数
+type UserAuthPayload struct {
 	Sign       string `json:"sign" validate:"max=32"`    //签名
 	Atime      int64  `json:"atime" validate:"required"` //签名时间戳	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
 	VerifyCode string `json:"verify_code" validate:"required"`
 	UserID     string `json:"user_id" validate:"required"`
-	Amount     string `json:"amount" validate:"required"`
 	ChainType  string `json:"chain_type" validate:"required,oneof=ethereum poa"`
+}
+
+//TransferPayload 转账原生币参数
+type TransferPayload struct {
+	UserAuthPayload
+	Amount string `json:"amount" validate:"required"`
+}
+
+//BuyPointsysPayload 转账原生币参数
+type BuyPointsysPayload struct {
+	UserAuthPayload
+	Amount string `json:"amount" validate:"required"`
+	Buyer  string `json:"buyer" validate:"required"`
 }
 
 //RawTransactionPayload 离线交易参数
 type RawTransactionPayload struct {
-	Sign       string `json:"sign" validate:"max=32"`    //签名
-	Atime      int64  `json:"atime" validate:"required"` //签名时间戳	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
-	VerifyCode string `json:"verify_code" validate:"required"`
-	UserID     string `json:"user_id" validate:"required"`
+	UserAuthPayload
 	SignedData string `json:"signed_data" validate:"required"`
-	ChainType  string `json:"chain_type" validate:"required,oneof=ethereum poa"`
 }
 
-//BuyPointsPayload 离线交易参数
+//BuyPointsPayload 购买交易参数
 type BuyPointsPayload struct {
-	Sign       string `json:"sign" validate:"max=32"`    //签名
-	Atime      int64  `json:"atime" validate:"required"` //签名时间戳	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
-	VerifyCode string `json:"verify_code" validate:"required"`
-	UserID     string `json:"user_id" validate:"required"`
-	Amount     string `json:"amount" validate:"required"`
-	ChainType  string `json:"chain_type" validate:"required,oneof=ethereum poa"`
+	UserAuthPayload
+	Amount string `json:"amount" validate:"required"`
 }
 
 //QueryTransactionPayload 离线交易参数
 type QueryTransactionPayload struct {
-	Sign      string `json:"sign" validate:"max=32"`    //签名
-	Atime     int64  `json:"atime" validate:"required"` //签名时间戳	当前UNIX TIMESTAMP签名时间戳 (如:137322417)
-	UserID    string `json:"user_id" validate:"required"`
-	TxHash    string `json:"tx_hash" validate:"required"`
-	ChainType string `json:"chain_type" validate:"required,oneof=ethereum poa"`
+	UserAuthPayload
+	TxHash string `json:"tx_hash" validate:"required"`
 }
 
 //QueryTransactionReponse 返回交易状态结构

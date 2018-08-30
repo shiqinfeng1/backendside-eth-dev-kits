@@ -2,6 +2,8 @@ package v1
 
 import (
 	ethcmn "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/labstack/echo"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
@@ -10,7 +12,7 @@ import (
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/httpservice"
 )
 
-//UserTransferETH : 用户转账,限于后台管理的用户以太地址
+//UserTransferETH : 用户转账,非离线签名转账,仅限于后台hd钱包生成维护管理的用户地址
 func UserTransferETH(c echo.Context) error {
 	p := httpservice.TransferPayload{}
 	if err := c.Bind(&p); err != nil {
@@ -20,11 +22,12 @@ func UserTransferETH(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证
-	// if common.UserAuth(p.UserID) == false {
-	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
-	// }
+	if common.UserAuth(p.UserID) == false {
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
+	}
 
-	txhash, err := eth.Transfer(p)
+	//签名并发送交易
+	txhash, err := eth.TransferEth(p)
 	if err != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
 	}
@@ -52,6 +55,45 @@ func SendRawTransaction(c echo.Context) error {
 	return httpservice.JSONReturns(c, txhash)
 }
 
+//BuyPoints : 发送离线交易 购买积分
+func BuyPoints(c echo.Context) error {
+	p := httpservice.BuyPointsysPayload{}
+	if err := c.Bind(&p); err != nil {
+		return err
+	}
+	if err := c.Echo().Validator.Validate(p); err != nil {
+		return err
+	}
+	//TODO: 用户验证和短信验证码验证
+	if common.UserAuth(p.UserID) == false {
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
+	}
+
+	//解析参数
+	a, err := math.ParseBig256(p.Amount)
+	if err == false {
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "invalid transfer amount")
+	}
+	amount := hexutil.Big(*a)
+
+	//获取铸币的账户
+	adminAddress, err2 := accounts.GetadminAddress()
+	if err2 != nil {
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "no admin. err:"+err2.Error())
+	}
+	auth, err3 := contracts.GetUserAuth(adminAddress.Hex())
+	if err3 != nil {
+		common.Logger.Error("GetUserAuth: 15422339579 fail.")
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err3.Error())
+	}
+
+	txn, err5 := contracts.PointsBuy(p.ChainType, adminAddress.Hex(), auth, p.Buyer, amount.ToInt().Uint64())
+	if err5 != nil {
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err5.Error())
+	}
+	return httpservice.JSONReturns(c, txn.Hash().String())
+}
+
 //ConsumePoints : 发送离线交易 消费积分
 func ConsumePoints(c echo.Context) error {
 	p := httpservice.RawTransactionPayload{}
@@ -64,11 +106,6 @@ func ConsumePoints(c echo.Context) error {
 	//TODO: 用户验证和短信验证码验证
 	if common.UserAuth(p.UserID) == false {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
-	}
-	//检查购买积分用户地址检查
-	_, err2 := accounts.GetUserAddress(p.UserID)
-	if err2 != nil {
-		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "no such userID: "+p.UserID+". err:"+err2.Error())
 	}
 
 	//解析交易
@@ -117,11 +154,6 @@ func RefundPoints(c echo.Context) error {
 	//TODO: 用户验证和短信验证码验证
 	if common.UserAuth(p.UserID) == false {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
-	}
-	//检查购买积分用户地址检查
-	_, err2 := accounts.GetUserAddress(p.UserID)
-	if err2 != nil {
-		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "no such userID: "+p.UserID+". err:"+err2.Error())
 	}
 
 	//解析交易

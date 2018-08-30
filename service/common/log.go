@@ -11,7 +11,7 @@ import (
 )
 
 var format = logging.MustStringFormatter(
-	`%{color}%{time} %{callpath} > %{level:.4s} %{id:03x} %{message}`, //%{color:reset}
+	`%{color}%{time}|%{level:.6s}|%{id:03x}|%{callpath} > %{message}`, //%{color:reset}
 )
 
 //Logger 日志记录器

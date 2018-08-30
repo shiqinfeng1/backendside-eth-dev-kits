@@ -227,6 +227,17 @@ func GetUserAddress(userID string) (common.Address, error) {
 	return common.HexToAddress(accountInfo.Address), nil
 }
 
+//GetadminAddress 获取管理员账户
+func GetadminAddress() (common.Address, error) {
+	accountInfo, err := getAccountInfo("15422339579")
+	if err != nil {
+		cmn.Logger.Error(err)
+		return common.Address{}, err
+	}
+
+	return common.HexToAddress(accountInfo.Address), nil
+}
+
 //SignTx 交易签名
 func SignTx(userID string, tx *cmn.TransactionRequest) ([]byte, error) {
 	index := useridToIndex(userID)
