@@ -29,7 +29,7 @@ poa:
   endpoints: 
     - http://18.222.179.249:21024
     - http://18.222.179.249:21024
-  pointsaddress: 0xa7a90C695ba0A8851825A559ee8Ed3064D3d58FE
+  pointsaddress: 
   txtimeout: 120  #120秒
   txcomfired: 3  #交易确认块数
 solidity:
