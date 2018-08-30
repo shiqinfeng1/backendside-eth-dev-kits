@@ -22,9 +22,9 @@ func UserTransferETH(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证
-	if common.UserAuth(p.UserID) == false {
-		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
-	}
+	// if common.UserAuth(p.UserID) == false {
+	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
+	// }
 
 	//签名并发送交易
 	txhash, err := eth.TransferEth(p)
@@ -44,9 +44,9 @@ func SendRawTransaction(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证
-	if common.UserAuth(p.UserID) == false {
-		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
-	}
+	// if common.UserAuth(p.UserID) == false {
+	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
+	// }
 
 	txhash, err := eth.SendRawTransaction(p)
 	if err != nil {
@@ -65,9 +65,9 @@ func BuyPoints(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证和短信验证码验证
-	if common.UserAuth(p.UserID) == false {
-		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
-	}
+	// if common.UserAuth(p.UserID) == false {
+	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
+	// }
 
 	//解析参数
 	a, err := math.ParseBig256(p.Amount)
@@ -77,17 +77,17 @@ func BuyPoints(c echo.Context) error {
 	amount := hexutil.Big(*a)
 
 	//获取铸币的账户
-	adminAddress, err2 := accounts.GetadminAddress()
+	adminAddress, err2 := accounts.GetadminAddress("15422339579")
 	if err2 != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "no admin. err:"+err2.Error())
 	}
-	auth, err3 := contracts.GetUserAuth(adminAddress.Hex())
+	auth, err3 := contracts.GetUserAuth("15422339579")
 	if err3 != nil {
-		common.Logger.Error("GetUserAuth: 15422339579 fail.")
+		common.Logger.Errorf("Get Admin Auth: %s fail.", adminAddress.Hex())
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err3.Error())
 	}
 
-	txn, err5 := contracts.PointsBuy(p.ChainType, adminAddress.Hex(), auth, p.Buyer, amount.ToInt().Uint64())
+	txn, err5 := contracts.PointsBuy(p.ChainType, "15422339579", auth, p.Buyer, amount.ToInt().Uint64())
 	if err5 != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err5.Error())
 	}
@@ -104,9 +104,9 @@ func ConsumePoints(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证和短信验证码验证
-	if common.UserAuth(p.UserID) == false {
-		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
-	}
+	// if common.UserAuth(p.UserID) == false {
+	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
+	// }
 
 	//解析交易
 	transaction, from, err := eth.SignedDataToTransaction(p.SignedData)
@@ -152,9 +152,9 @@ func RefundPoints(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证和短信验证码验证
-	if common.UserAuth(p.UserID) == false {
-		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
-	}
+	// if common.UserAuth(p.UserID) == false {
+	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
+	// }
 
 	//解析交易
 	transaction, from, err := eth.SignedDataToTransaction(p.SignedData)

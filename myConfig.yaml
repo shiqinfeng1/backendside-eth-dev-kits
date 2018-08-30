@@ -19,7 +19,7 @@ ethereum:
     - http://18.222.179.249:21024
     - http://18.222.179.249:21024
   adminaccount: 0x1dcef12e93b0abf2d36f723e8b59cc762775d513
-  omcaddress: 0x174B214875015221f3837C4f68A7b888D0d7Cc4A
+  omcaddress: 0x71ef150884aE337308FEca26cf1461ea85f98235
   gas: 100000  # 10万
   price: 30000000000  # 30GWei
   txtimeout: 600  #10分钟
@@ -29,7 +29,7 @@ poa:
   endpoints: 
     - http://18.222.179.249:21024
     - http://18.222.179.249:21024
-  pointsaddress: 
+  pointsaddress: 0x7e1b7F2936f40c78741C0bB295e1003f077DA0f8
   txtimeout: 120  #120秒
   txcomfired: 3  #交易确认块数
 solidity:
