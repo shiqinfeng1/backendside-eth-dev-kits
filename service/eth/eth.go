@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/kr/pretty"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
 	cmn "github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/endpoints"
@@ -93,13 +92,13 @@ func TransferEth(p httpservice.TransferPayload) (string, error) {
 	}
 	signedTx, err4 := accounts.SignTx(p.UserID, transaction)
 	if err4 != nil {
-		pretty.Println("\nsignedTx:", signedTx, "\nerror: ", err4, "\n")
+		cmn.Logger.Error("\nsignedTx:", signedTx, "\nerror: ", err4, "\n")
 		return "", nil
 	}
 
 	txHash, err5 := con.EthSendRawTransaction(signedTx)
 	if err5 != nil {
-		pretty.Println("\ntxHash:", txHash.String(), "\nerror: ", err5, "\n")
+		cmn.Logger.Error("\ntxHash:", txHash.String(), "\nerror: ", err5, "\n")
 		return "", err5
 	}
 	var para = &PendingPoolParas{
@@ -125,7 +124,7 @@ func SendRawTransaction(p httpservice.RawTransactionPayload) (string, error) {
 	var raw = &RawData{SignedData: p.SignedData, ChainType: p.ChainType}
 	txHash, _, err := SendRawTxn(raw)
 	if err != nil {
-		pretty.Println("\ntxHash:", txHash, "\nerror: ", err, "\n")
+		cmn.Logger.Error("\ntxHash:", txHash, "\nerror: ", err, "\n")
 		return "", err
 	}
 	transaction, from, err := SignedDataToTransaction(p.SignedData)

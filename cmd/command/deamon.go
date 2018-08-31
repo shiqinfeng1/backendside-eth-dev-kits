@@ -2,11 +2,18 @@ package command
 
 import (
 	"math/big"
+	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	ethcmn "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/api/v1"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/contracts"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/contracts/ERC20"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/db"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/endpoints"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/eth"
@@ -62,6 +69,42 @@ var daemonCmd = &cobra.Command{
 		}
 
 		contracts.PointsBuy("poa", "15422339579", auth, "0x1dcef12e93b0abf2d36f723e8b59cc762775d513", 100000)
+
+		if abi, err := abi.JSON(strings.NewReader(ERC20.PointCoinABI)); err == nil {
+			if input, err := abi.Pack("consume", 4321); err == nil {
+
+				v, _ := math.ParseBig256(common.Config().GetString("ethereum.gas"))
+				gas := hexutil.Big(*v)
+
+				g, _ := math.ParseBig256(common.Config().GetString("ethereum.price"))
+				price := hexutil.Big(*g)
+
+				userAddress := ethcmn.HexToAddress("0x1dcef12e93b0abf2d36f723e8b59cc762775d513")
+				con := eth.ConnectEthNodeForWeb3("poa")
+				if con == nil {
+					return nil
+				}
+				nonce, err3 := con.EthGetNonce(userAddress)
+				if err3 != nil {
+					return nil
+				}
+				rawTx := types.NewTransaction(
+					nonce.ToInt().Uint64(),
+					ethcmn.HexToAddress(common.Config().GetString("poa.pointsaddress")),
+					nil,
+					gas.ToInt().Uint64(),
+					price.ToInt(),
+					input)
+				key, err := accounts.GetAccountFromKeystore(userAddress.Hex(), "123456")
+				// Sign the transaction and verify the sender to avoid hardware fault surprises
+				signedTx, err := types.SignTx(rawTx, types.HomesteadSigner{}, key.PrivateKey)
+				if err != nil {
+					return nil
+				}
+
+			}
+		}
+
 		/****************************/
 
 		return nil

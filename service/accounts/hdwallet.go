@@ -178,6 +178,17 @@ func getAccountFromHDWallet(index string) (*ethacc.Account, error) {
 	return &account, nil
 }
 
+//GetAccountFromKeystore 从keystore中解析得到账户
+func GetAccountFromKeystore(userAddress string, _passphrase string) (*keystore.Key, error) {
+	keys := readKeystore(userAddress)
+	key, err := keystore.DecryptKey(keys, _passphrase)
+	if err != nil {
+		cmn.Logger.Errorf("Failed to decrypt key: %v", err)
+		return nil, err
+	}
+	return key, nil
+}
+
 func createAccountInfoToDB(userID, path, address string) error {
 
 	accountinfo := &db.AccountInfo{}

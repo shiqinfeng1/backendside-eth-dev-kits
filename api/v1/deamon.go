@@ -87,7 +87,7 @@ func BuyPoints(c echo.Context) error {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err3.Error())
 	}
 
-	txn, err5 := contracts.PointsBuy(p.ChainType, "15422339579", auth, p.Buyer, amount.ToInt().Uint64())
+	txn, err5 := contracts.PointsBuy(p.ChainType, "admin", auth, p.Buyer, amount.ToInt().Uint64())
 	if err5 != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err5.Error())
 	}
