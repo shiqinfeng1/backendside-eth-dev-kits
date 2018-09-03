@@ -113,7 +113,7 @@ func PraseBuyPoints(txn *types.Transaction) (*[]string, error) {
 
 // PraseConsumePoints 消费积分
 // from to value
-func PraseConsumePoints(txn *types.Transaction) (*[]string, error) {
+func PraseConsumePoints(txn *types.Transaction) ([]string, error) {
 
 	var functionCall = make([]string, 2)
 
@@ -130,12 +130,12 @@ func PraseConsumePoints(txn *types.Transaction) (*[]string, error) {
 	if ok {
 		functionCall[1] = i256.Text(10)
 	}
-	return &functionCall, nil
+	return functionCall, nil
 }
 
 // PraseRefundPoints 消费积分
 // from to value
-func PraseRefundPoints(txn *types.Transaction) (*[]string, error) {
+func PraseRefundPoints(txn *types.Transaction) ([]string, error) {
 
 	var functionCall = make([]string, 1)
 
@@ -149,5 +149,5 @@ func PraseRefundPoints(txn *types.Transaction) (*[]string, error) {
 	}
 	functionCall[0] = from.String()
 
-	return &functionCall, nil
+	return functionCall, nil
 }

@@ -35,4 +35,5 @@ type PendingTransactionInfo struct {
 	Comfired        int    `gorm:"not null"`
 	ListenTimeout   bool   `gorm:"not null"`
 	ListenTimeoutAt time.Time
+	Description     string `gorm:"type:varchar(256)"`
 }

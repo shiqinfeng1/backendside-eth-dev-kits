@@ -1,6 +1,7 @@
 package contracts
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -9,10 +10,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
+	ethcmn "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -160,12 +161,13 @@ func DeployOMCToken(chainName, userID string, auth *bind.TransactOpts) (*ERC20.O
 		updateOmcAddressToConfig(addr.Hex())
 		//将会交易加入监听池
 		var para = &eth.PendingPoolParas{
-			ChainType: chainName,
-			UserID:    userID,
-			TxHash:    txn.Hash(),
-			From:      auth.From,
-			To:        common.Address{},
-			Nonce:     txn.Nonce(),
+			ChainType:   chainName,
+			UserID:      userID,
+			TxHash:      txn.Hash(),
+			From:        auth.From,
+			To:          ethcmn.Address{},
+			Nonce:       txn.Nonce(),
+			Description: fmt.Sprintf("%v.%v.%v.%v", chainName, "DeployOMCToken", userID, auth.From.Hex()),
 		}
 		eth.AppendToPendingPool(para)
 		//等待交易上链
@@ -181,7 +183,7 @@ func AttachOMCToken(chainName string) (*ERC20.OMC, *ethclient.Client, error) {
 	if client == nil {
 		return nil, nil, errors.New("no eth client")
 	}
-	token, err := ERC20.NewOMC(common.HexToAddress(cmn.Config().GetString(chainName+".omcaddress")), client)
+	token, err := ERC20.NewOMC(ethcmn.HexToAddress(cmn.Config().GetString(chainName+".omcaddress")), client)
 	if err != nil {
 		cmn.Logger.Errorf("Failed to instantiate a Token contract: %v", err)
 	}
@@ -202,7 +204,7 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 	nb, _ := OMCTokenBalanceOf(chainName, auth.From)
 	if amount > nb.Uint64() {
 		cmn.Logger.Errorf("Insufficient balance: has %v. need %v", nb.Uint64(), amount)
-		return nil, err
+		return nil, errors.New("Insufficient balance")
 	}
 	// cmn.Logger.Infof("balance:%v", nb)
 	// 手动指定gaslimit和gasprice
@@ -214,7 +216,7 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 		return nil, err
 	}
 	defer conn.Close()
-	txn, err := omc.Transfer(auth, common.HexToAddress(receiver), big.NewInt(0).SetUint64(amount))
+	txn, err := omc.Transfer(auth, ethcmn.HexToAddress(receiver), big.NewInt(0).SetUint64(amount))
 	if err != nil {
 		cmn.Logger.Errorf("Failed to Transfer: %v", err)
 		return nil, err
@@ -228,6 +230,7 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 		From:      auth.From,
 		To:        *txn.To(),
 		Nonce:     txn.Nonce(),
+		Description: fmt.Sprintf("%v.%v.%v.%v:%v.%v", chainName, "OMCToken.transfer", userID, auth.From.Hex(),receiver,amount),
 	}
 	eth.AppendToPendingPool(para)
 
@@ -236,13 +239,13 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 		chainName,
 		txn.Hash().Hex(),
 		blockNum.ToInt().Uint64(),
-		auth.From, common.HexToAddress(receiver))
+		auth.From, ethcmn.HexToAddress(receiver))
 
 	return txn, err
 }
 
 //OMCTokenBalanceOf 查询余额
-func OMCTokenBalanceOf(chainName string, addr common.Address) (*big.Int, error) {
+func OMCTokenBalanceOf(chainName string, addr ethcmn.Address) (*big.Int, error) {
 	omc, conn, err := AttachOMCToken(chainName)
 	if err != nil {
 		cmn.Logger.Errorf("Failed to AttachOMCToken: %v", err)
@@ -255,39 +258,6 @@ func OMCTokenBalanceOf(chainName string, addr common.Address) (*big.Int, error) 
 		return nil, err
 	}
 	return balance, err
-}
-
-//PollEventTransfer 等待交易上链,如果执行成功,捕获Transfer事件
-func PollEventTransfer(chainName, txHash string, startBlock uint64, from, to common.Address) {
-	omc, conn, err := AttachOMCToken(chainName)
-	if err != nil {
-		cmn.Logger.Errorf("Failed to AttachOMCToken: %v", err)
-		return
-	}
-	defer conn.Close()
-	_, success, _, _, _ := waitMinedSync(txHash)
-
-	//如果交易失败,则不会有事件触发,无需监听
-	if success == true {
-		catchEventTransfer(
-			omc,
-			startBlock,
-			[]common.Address{from},
-			[]common.Address{to})
-	}
-}
-
-func catchEventTransfer(omc *ERC20.OMC, startBlock uint64, from, to []common.Address) {
-	//TODO: 记录捕获Transfer事件
-	history, err := omc.FilterTransfer(&bind.FilterOpts{Start: startBlock}, from, to)
-	if err != nil {
-		cmn.Logger.Errorf("fail to FilterTransfer: %v", err)
-		return
-	}
-	for history.Next() {
-		e := history.Event
-		cmn.Logger.Infof("%s transfer to %s value=%s, at %d", e.From.String(), e.To.String(), e.Value, e.Raw.BlockNumber)
-	}
 }
 
 // DeployPointCoin 部署合约
@@ -316,8 +286,9 @@ func DeployPointCoin(chainName, userID string, auth *bind.TransactOpts) (*ERC20.
 			UserID:    userID,
 			TxHash:    txn.Hash(),
 			From:      auth.From,
-			To:        common.Address{},
+			To:        ethcmn.Address{},
 			Nonce:     txn.Nonce(),
+			Description: fmt.Sprintf("%v.%v.%v.%v", chainName, "DeployPointCoin", userID, auth.From.Hex()),
 		}
 		eth.AppendToPendingPool(para)
 		//等待交易上链
@@ -333,14 +304,30 @@ func AttachPointCoin(chainName string) (*ERC20.PointCoin, *ethclient.Client, err
 	if client == nil {
 		return nil, nil, errors.New("no eth client")
 	}
-	points, err := ERC20.NewPointCoin(common.HexToAddress(cmn.Config().GetString(chainName+".pointsaddress")), client)
+	points, err := ERC20.NewPointCoin(ethcmn.HexToAddress(cmn.Config().GetString(chainName+".pointsaddress")), client)
 	if err != nil {
 		cmn.Logger.Errorf("Failed to instantiate a Token contract: %v", err)
 	}
 	return points, client, err
 }
 
-// PointsBuy 执行buy
+//PointCoinBalanceOf 查询余额
+func PointCoinBalanceOf(chainName string, addr ethcmn.Address) (*big.Int, error) {
+	points, conn, err := AttachPointCoin(chainName)
+	if err != nil {
+		cmn.Logger.Errorf("Failed to AttachPointCion: %v", err)
+		return nil, err
+	}
+	defer conn.Close()
+	balance, err := points.BalanceOf(&bind.CallOpts{Pending: true}, addr)
+	if err != nil {
+		cmn.Logger.Errorf("Get BalanceOf: %v fail: %v", addr, err)
+		return nil, err
+	}
+	return balance, err
+}
+
+// PointsBuy 购买积分
 func PointsBuy(chainName, userID string, auth *bind.TransactOpts, receiver string, amount uint64) (*types.Transaction, error) {
 
 	cmn.Logger.Debugf("[PointsBuy] chainName:%v userID: %v receiver:%v amount:%v", chainName, userID, receiver, amount)
@@ -357,7 +344,7 @@ func PointsBuy(chainName, userID string, auth *bind.TransactOpts, receiver strin
 		return nil, err
 	}
 	defer conn.Close()
-	txn, err := points.Buy(auth, common.HexToAddress(receiver), big.NewInt(0).SetUint64(amount))
+	txn, err := points.Buy(auth, ethcmn.HexToAddress(receiver), big.NewInt(0).SetUint64(amount))
 	if err != nil {
 		cmn.Logger.Errorf("Failed to Buy points: %v", err)
 		return nil, err
@@ -369,6 +356,7 @@ func PointsBuy(chainName, userID string, auth *bind.TransactOpts, receiver strin
 		From:      auth.From,
 		To:        *txn.To(),
 		Nonce:     txn.Nonce(),
+		Description: fmt.Sprintf("%v.%v.%v.%v:%v", chainName, "PointCoin.buy", auth.From.Hex(), receiver,amount),
 	}
 	eth.AppendToPendingPool(para)
 	//等待交易上链,并捕获Transfer事件
@@ -376,92 +364,99 @@ func PointsBuy(chainName, userID string, auth *bind.TransactOpts, receiver strin
 		chainName,
 		txn.Hash().Hex(),
 		blockNum.ToInt().Uint64(),
-		common.HexToAddress(receiver))
+		ethcmn.HexToAddress(receiver))
 	return txn, err
 }
 
-//PollEventMint 等待交易上链,如果执行成功,捕获Mint事件
-func PollEventMint(chainName, txHash string, startBlock uint64, to common.Address) {
-	points, conn, err := AttachPointCoin(chainName)
-	if err != nil {
-		cmn.Logger.Errorf("Failed to AttachPointCoin: %v", err)
-		return
-	}
-	defer conn.Close()
-	_, success, _, _, _ := waitMinedSync(txHash)
+// PointsConsume 消费积分,keystore和密码进行离线签名并发送交易
+func PointsConsume(chainName, consumerID, consumer, passphrase string, amount int64) (*types.Transaction, error) {
 
-	//如果交易失败,则不会有事件触发,无需监听
-	if success == true {
-		catchEventMint(
-			points,
-			startBlock,
-			[]common.Address{to})
-	}
-}
-func catchEventMint(points *ERC20.PointCoin, startBlock uint64, to []common.Address) {
-	//TODO: 记录捕获Transfer事件
-	history, err := points.FilterMint(&bind.FilterOpts{Start: startBlock}, to)
-	if err != nil {
-		cmn.Logger.Errorf("fail to FilterMint: %v", err)
-		return
-	}
-	for history.Next() {
-		e := history.Event
-		cmn.Logger.Infof("%s Buy Points %v at block %d", e.To.String(), e.Amount, e.Raw.BlockNumber)
-	}
-}
+	cmn.Logger.Debugf("[PointsConsume] chainName:%v consumer:%v amount:%v", chainName, consumer, amount)
+	userAddress := ethcmn.HexToAddress(consumer)
 
-//PollEventBurn 等待交易上链,如果执行成功,捕获Burn事件
-func PollEventBurn(chainName, txHash string, startBlock uint64, burner common.Address) {
-	points, conn, err := AttachPointCoin(chainName)
+	nb, _ := PointCoinBalanceOf(chainName, userAddress)
+	if uint64(amount) > nb.Uint64() {
+		cmn.Logger.Errorf("Insufficient balance: has %v. need %v", nb.Uint64(), amount)
+		return nil, errors.New("Insufficient balance")
+	}
+
+	//组装函数调用rlp编码数据
+	abi, err := abi.JSON(strings.NewReader(ERC20.PointCoinABI))
 	if err != nil {
-		cmn.Logger.Errorf("Failed to AttachPointCoin: %v", err)
-		return
+		cmn.Logger.Errorf("Prase ABI Fail: %v", err)
+		return nil, err
 	}
-	defer conn.Close()
-	_, success, _, _, _ := waitMinedSync(txHash)
-	//如果交易失败,则不会有事件触发,无需监听
-	if success == true {
-		catchEventBurn(
-			points,
-			startBlock,
-			[]common.Address{burner})
-	}
-}
-func catchEventBurn(points *ERC20.PointCoin, startBlock uint64, burner []common.Address) {
-	//TODO: 记录捕获Transfer事件
-	history, err := points.FilterBurn(&bind.FilterOpts{Start: startBlock}, burner)
+
+	input, err := abi.Pack("consume", big.NewInt(amount))
 	if err != nil {
-		cmn.Logger.Errorf("fail to FilterBurn: %v", err)
-		return
+		cmn.Logger.Errorf("Pack Input Fail: %v", err)
+		return nil, err
 	}
-	for history.Next() {
-		e := history.Event
-		cmn.Logger.Infof("%s Burn Points %v at block %d", e.Burner.String(), e.Value, e.Raw.BlockNumber)
+
+	//设置gas和gaslimit
+	v, _ := math.ParseBig256(cmn.Config().GetString("ethereum.gas"))
+	gas := hexutil.Big(*v)
+	g, _ := math.ParseBig256(cmn.Config().GetString("ethereum.price"))
+	price := hexutil.Big(*g)
+
+	//获取指定地址的nonce
+	con := eth.ConnectEthNodeForWeb3(chainName)
+	if con == nil {
+		cmn.Logger.Errorf("Connect Eth Node Fail: %v", err)
+		return nil, err
 	}
-}
-func waitMinedSync(txHash string) (mined bool, success bool, timeout bool, minedBlock uint64, comfired int) {
-	var count int
-	var err error
-	timeout = false
-	defer func() {
-		cmn.Logger.Noticef("[waitMinedSync]Pending Txn: %v Status: Mined:%v Success:%v Timeout:%v minedBlock:%v comfired:%v",
-			txHash, mined, success, timeout, minedBlock, comfired)
-	}()
-	for {
-		time.Sleep(time.Second * 2)
-		if mined, success, minedBlock, comfired, err = eth.IsMined(txHash); err != nil {
-			cmn.Logger.Errorf("[waitMinedSync]transaction %v is mined fail: %v", txHash, err)
-			return
-		}
-		if mined == true {
-			return
-		}
-		count++
-		if count > cmn.Config().GetInt("ethereum.txtimeout")/2 {
-			break
-		}
+	nonce, err := con.EthGetNonce(userAddress)
+	if err != nil {
+		cmn.Logger.Errorf("Get address Nonce Fail: %v", err)
+		return nil, err
 	}
-	timeout = true
-	return
+	//构造交易数据
+	rawTx := types.NewTransaction(
+		nonce.ToInt().Uint64(),
+		ethcmn.HexToAddress(cmn.Config().GetString(chainName+".pointsaddress")),
+		nil, //value=0
+		gas.ToInt().Uint64(),
+		price.ToInt(),
+		input)
+
+	//签名交易数据
+	key, err := accounts.GetAccountFromKeystore(userAddress.Hex(), passphrase)
+	if err != nil {
+		cmn.Logger.Errorf("Get address Nonce Fail: %v", err)
+		return nil, err
+	}
+	var signedData bytes.Buffer
+	signedTx, err := types.SignTx(rawTx, types.HomesteadSigner{}, key.PrivateKey)
+	if err != nil {
+		cmn.Logger.Errorf("SignTx Fail: %v", err)
+		return nil, err
+	}
+	signedTx.EncodeRLP(&signedData)
+
+	//发送离线交易
+	var rawSigned = &eth.RawData{SignedData: signedData.String(), ChainType: chainName}
+
+	txHash, blockNum, err := eth.SendRawTxn(rawSigned)
+	if err != nil {
+		cmn.Logger.Errorf("SendRawTxn Fail: %v", err)
+		return nil, err
+	}
+
+	var para = &eth.PendingPoolParas{
+		ChainType:   chainName,
+		UserID:      consumerID,
+		TxHash:      ethcmn.HexToHash(txHash),
+		From:        userAddress,
+		To:          *rawTx.To(),
+		Nonce:       rawTx.Nonce(),
+		Description: fmt.Sprintf("%s.%s.%s:%v", chainName, "PointCoin.comsume", consumer, amount),
+	}
+	eth.AppendToPendingPool(para)
+	//等待交易上链,并捕获Burn事件
+	go PollEventBurn(
+		chainName,
+		txHash,
+		blockNum.ToInt().Uint64(),
+		userAddress)
+	return rawTx, err
 }

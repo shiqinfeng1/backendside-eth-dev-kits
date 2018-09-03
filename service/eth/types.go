@@ -28,12 +28,13 @@ type UserLoginReponse struct {
 
 //PendingPoolParas pendingpool的输入参数
 type PendingPoolParas struct {
-	ChainType string
-	UserID    string
-	TxHash    ethcmn.Hash
-	From      ethcmn.Address
-	To        ethcmn.Address
-	Nonce     uint64
+	ChainType   string
+	UserID      string
+	TxHash      ethcmn.Hash
+	From        ethcmn.Address
+	To          ethcmn.Address
+	Nonce       uint64
+	Description string
 }
 
 //RawData 离线交易参数

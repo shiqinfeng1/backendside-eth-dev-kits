@@ -94,6 +94,12 @@ type BuyPointsysPayload struct {
 	Buyer  string `json:"buyer" validate:"required"`
 }
 
+//QueryPointsPayload 转账原生币参数
+type QueryPointsPayload struct {
+	UserAuthPayload
+	Address string `json:"address" validate:"required"`
+}
+
 //RawTransactionPayload 离线交易参数
 type RawTransactionPayload struct {
 	UserAuthPayload

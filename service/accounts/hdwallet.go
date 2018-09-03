@@ -148,6 +148,7 @@ func GetTransactOptsFromHDWallet(userID string) (*bind.TransactOpts, error) {
 	if err != nil {
 		return nil, err
 	}
+	cmn.Logger.Errorf("userID: %v index: %v", userID, index)
 	//首先导入上面生成的账户密钥（json）和密码
 	keys, _ := ioutil.ReadFile(accInfo.Path)
 	transactOpts, err := bind.NewTransactor(strings.NewReader(string(keys)), "m44600"+index)

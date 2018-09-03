@@ -2,18 +2,11 @@ package command
 
 import (
 	"math/big"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	ethcmn "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/api/v1"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/contracts"
-	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/contracts/ERC20"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/db"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/endpoints"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/eth"
@@ -42,7 +35,14 @@ var daemonCmd = &cobra.Command{
 		/***for test*****************/
 		accounts.NewAccount("15422339579")
 
-		auth, err := contracts.GetUserAuth("15422339579")
+		//通过用户名获取auth,仅限于hd钱包生成的账户
+		// auth, err := contracts.GetUserAuth("15422339579")
+		// if err != nil {
+		// 	common.Logger.Error("GetUserAuth: 15422339579 fail.")
+		// 	return nil
+		// }
+		//通过用户地址获取auth,适用于所有在keystore中的账户
+		auth, err := contracts.GetUserAuthWithPassword("0xdf0759b89b9a9e83500e11978ef903e740c895ff", "m44600179701454")
 		if err != nil {
 			common.Logger.Error("GetUserAuth: 15422339579 fail.")
 			return nil
@@ -58,7 +58,7 @@ var daemonCmd = &cobra.Command{
 			common.Logger.Errorf("2.nonce=%v", auth.Nonce)
 		}
 
-		contracts.OMCTokenTransfer("ethereum", "15422339579", auth, "0x1dcef12e93b0abf2d36f723e8b59cc762775d513", 100000)
+		contracts.OMCTokenTransfer("ethereum", "15422339579", auth, "0x1dcef12e93b0abf2d36f723e8b59cc762775d513", 1000)
 		auth.Nonce.Add(auth.Nonce, big.NewInt(1))
 		common.Logger.Errorf("3.nonce=%v", auth.Nonce)
 
@@ -68,42 +68,10 @@ var daemonCmd = &cobra.Command{
 			common.Logger.Errorf("4.nonce=%v", auth.Nonce)
 		}
 
+		//通过abigen生成的代码执行合约函数
 		contracts.PointsBuy("poa", "15422339579", auth, "0x1dcef12e93b0abf2d36f723e8b59cc762775d513", 100000)
-
-		if abi, err := abi.JSON(strings.NewReader(ERC20.PointCoinABI)); err == nil {
-			if input, err := abi.Pack("consume", 4321); err == nil {
-
-				v, _ := math.ParseBig256(common.Config().GetString("ethereum.gas"))
-				gas := hexutil.Big(*v)
-
-				g, _ := math.ParseBig256(common.Config().GetString("ethereum.price"))
-				price := hexutil.Big(*g)
-
-				userAddress := ethcmn.HexToAddress("0x1dcef12e93b0abf2d36f723e8b59cc762775d513")
-				con := eth.ConnectEthNodeForWeb3("poa")
-				if con == nil {
-					return nil
-				}
-				nonce, err3 := con.EthGetNonce(userAddress)
-				if err3 != nil {
-					return nil
-				}
-				rawTx := types.NewTransaction(
-					nonce.ToInt().Uint64(),
-					ethcmn.HexToAddress(common.Config().GetString("poa.pointsaddress")),
-					nil,
-					gas.ToInt().Uint64(),
-					price.ToInt(),
-					input)
-				key, err := accounts.GetAccountFromKeystore(userAddress.Hex(), "123456")
-				// Sign the transaction and verify the sender to avoid hardware fault surprises
-				signedTx, err := types.SignTx(rawTx, types.HomesteadSigner{}, key.PrivateKey)
-				if err != nil {
-					return nil
-				}
-
-			}
-		}
+		//通过keysore中的账户(+密码)离线签名执行合约函数
+		contracts.PointsConsume("poa", "sqf", "0x1dcef12e93b0abf2d36f723e8b59cc762775d513", "atmchainadmin", 321)
 
 		/****************************/
 

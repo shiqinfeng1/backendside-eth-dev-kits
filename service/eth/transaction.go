@@ -84,7 +84,7 @@ func (e *PendingTransactionManager) updateTransactionStatus(txHash string, mined
 		return err
 	}
 
-	cmn.Logger.Debugf("[PendingManager]txHash=%s Mined=%v, Success=%v", txHash, mined, success)
+	cmn.Logger.Debugf("[PendingManager]desc=%s txHash=%s Mined=%v, Success=%v", ptInfo.Description, txHash, mined, success)
 	dbconn.MysqlCommit()
 	return nil
 }
@@ -107,7 +107,7 @@ func (e *PendingTransactionManager) updateTransactionComfired(chainName string, 
 		return err
 	}
 
-	cmn.Logger.Debugf("[%s]txHash %s comfired block %v/%v", chainName, txHash, comfired, cmn.Config().GetInt(chainName+".txcomfired"))
+	cmn.Logger.Debugf("Desc:%s txHash:%s comfired block %v/%v", ptInfo.Description, txHash, comfired, cmn.Config().GetInt(chainName+".txcomfired"))
 	dbconn.MysqlCommit()
 	return nil
 }
@@ -120,13 +120,13 @@ func (e *PendingTransactionManager) updateTransactionTimeout(txHash string, list
 
 	notFound := dbconn.Model(&db.PendingTransactionInfo{}).Where("tx_hash = ?", txHash).Find(ptInfo).RecordNotFound()
 	if notFound {
-		err := "not found txHash:" + txHash + "in PendingTransactionInfo"
+		err := ptInfo.Description + " Not Found TxHash:" + txHash + "in PendingTransactionInfo"
 		cmn.Logger.Error(err)
 		return errors.New(err)
 	}
 	//在超时之前已经上链
 	if ptInfo.Mined == true {
-		cmn.Logger.Debug("transaction is already be mined: " + txHash)
+		cmn.Logger.Debugf("Desc:%v txn:%v is already be mined.", ptInfo.Description, txHash)
 		return nil
 	}
 	//更新记录超时时间
@@ -136,7 +136,7 @@ func (e *PendingTransactionManager) updateTransactionTimeout(txHash string, list
 		return err
 	}
 
-	cmn.Logger.Infof("txHash %s update listenTimeoutAt %v", txHash, listenTimeoutAt)
+	cmn.Logger.Infof("Desc:%v txHash:%s update listenTimeoutAt:%v", ptInfo.Description, txHash, listenTimeoutAt)
 	dbconn.MysqlCommit()
 	return nil
 }
@@ -180,7 +180,7 @@ func (e *PendingTransactionManager) watch(chainName string) {
 			return
 		}
 		if blockNum.ToInt().Uint64() < comfired.MinedBlock {
-			cmn.Logger.Errorf("[watch]txhash:%s MinedBlock: %v > current:%v",
+			cmn.Logger.Errorf("txhash:%s MinedBlock: %v > current:%v",
 				comfired.TxHash, comfired.MinedBlock, blockNum.ToInt().Uint64())
 			continue
 		}
@@ -264,6 +264,7 @@ func AppendToPendingPool(para *PendingPoolParas) error {
 		ptInfo.ListenTimeout = false
 		ptInfo.ListenTimeoutAt = time.Now()
 		ptInfo.ChainType = para.ChainType
+		ptInfo.Description = para.Description
 
 		err := dbconn.Create(ptInfo).Error
 		if err != nil {
@@ -284,7 +285,7 @@ func AppendToPendingPool(para *PendingPoolParas) error {
 }
 
 //IsMined 查询交易是否上链
-func IsMined(txHash string) (bool, bool, uint64, int, error) {
+func IsMined(txHash string) (bool, bool, uint64, int, string, error) {
 	ptInfo := &db.PendingTransactionInfo{}
 	dbconn := db.MysqlBegin()
 	defer dbconn.MysqlRollback()
@@ -296,12 +297,12 @@ func IsMined(txHash string) (bool, bool, uint64, int, error) {
 
 	if notFound {
 		cmn.Logger.Error("[query transaction is mined]no such txHash:", txHash)
-		return false, false, 0, 0, errors.New("no such txHash: " + txHash)
+		return false, false, 0, 0, "", errors.New("no such txHash: " + txHash)
 	}
 
 	if ptInfo.ListenTimeout == true {
-		cmn.Logger.Error("[query transaction is mined]txhash:", txHash, ". timeout at:", ptInfo.ListenTimeoutAt)
-		return false, false, 0, 0, errors.New("no more listen this pending transaction: " + txHash)
+		cmn.Logger.Error("Desc:", ptInfo.Description, "txhash:", txHash, ". timeout at:", ptInfo.ListenTimeoutAt)
+		return false, false, 0, 0, "", errors.New("no more listen this pending transaction: " + txHash)
 	}
-	return ptInfo.Mined, ptInfo.Success, ptInfo.MinedBlock, ptInfo.Comfired, nil
+	return ptInfo.Mined, ptInfo.Success, ptInfo.MinedBlock, ptInfo.Comfired, ptInfo.Description, nil
 }

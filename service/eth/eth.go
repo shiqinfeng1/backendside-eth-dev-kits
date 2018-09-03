@@ -2,6 +2,7 @@ package eth
 
 import (
 	"errors"
+	"fmt"
 
 	ethcmn "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -102,12 +103,13 @@ func TransferEth(p httpservice.TransferPayload) (string, error) {
 		return "", err5
 	}
 	var para = &PendingPoolParas{
-		ChainType: p.ChainType,
-		UserID:    p.UserID,
-		TxHash:    txHash,
-		From:      userAddress,
-		To:        transaction.To,
-		Nonce:     transaction.Nonce.ToInt().Uint64(),
+		ChainType:   p.ChainType,
+		UserID:      p.UserID,
+		TxHash:      txHash,
+		From:        userAddress,
+		To:          transaction.To,
+		Nonce:       transaction.Nonce.ToInt().Uint64(),
+		Description: fmt.Sprintf("%v.%v.%v.%v:%v.%v", p.ChainType, "OMCToken.transfer", p.UserID, userAddress.Hex(), transaction.To.Hex(), amount),
 	}
 	AppendToPendingPool(para)
 	return txHash.String(), nil
@@ -133,12 +135,13 @@ func SendRawTransaction(p httpservice.RawTransactionPayload) (string, error) {
 	}
 	cmn.Logger.Debug("\nDecodeRLP \nsigner:", from, "\ntxhash:", txHash)
 	var para = &PendingPoolParas{
-		ChainType: p.ChainType,
-		UserID:    p.UserID,
-		TxHash:    ethcmn.HexToHash(txHash),
-		From:      *from,
-		To:        *transaction.To(),
-		Nonce:     transaction.Nonce(),
+		ChainType:   p.ChainType,
+		UserID:      p.UserID,
+		TxHash:      ethcmn.HexToHash(txHash),
+		From:        *from,
+		To:          *transaction.To(),
+		Nonce:       transaction.Nonce(),
+		Description: fmt.Sprintf("%v.%v.%v.%v.%v", p.ChainType, "RawTxn", p.UserID, from.Hex(), (*transaction.To()).Hex()),
 	}
 	AppendToPendingPool(para)
 	return txHash, nil
@@ -146,15 +149,15 @@ func SendRawTransaction(p httpservice.RawTransactionPayload) (string, error) {
 
 //TransactionIsMined 发送离线交易
 func TransactionIsMined(p httpservice.QueryTransactionPayload) (resp *httpservice.QueryTransactionReponse, err error) {
-
+	var desc string
 	addr, err := accounts.GetUserAddress(p.UserID)
 	if err != nil {
 		return nil, errors.New("no such userID: " + p.UserID + ". err:" + err.Error())
 	}
 
-	resp.Mined, resp.Success, resp.MinedBlock, resp.Comfired, err = IsMined(p.TxHash)
+	resp.Mined, resp.Success, resp.MinedBlock, resp.Comfired, desc, err = IsMined(p.TxHash)
 	if err != nil {
-		return nil, errors.New("addr: " + addr.String() + " txhash: " + p.TxHash + "check mined err:" + err.Error())
+		return nil, errors.New("desc: " + desc + " addr: " + addr.String() + " txhash: " + p.TxHash + "check mined err:" + err.Error())
 	}
 	return
 }

@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"fmt"
+
 	ethcmn "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -94,7 +96,7 @@ func BuyPoints(c echo.Context) error {
 	return httpservice.JSONReturns(c, txn.Hash().String())
 }
 
-//ConsumePoints : 发送离线交易 消费积分
+//ConsumePoints : 发送用户离线签名的交易:消费积分
 func ConsumePoints(c echo.Context) error {
 	p := httpservice.RawTransactionPayload{}
 	if err := c.Bind(&p); err != nil {
@@ -114,7 +116,7 @@ func ConsumePoints(c echo.Context) error {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
 	}
 	//解析交易执行的输入数据
-	_, err = eth.PraseConsumePoints(transaction)
+	payloadData, err := eth.PraseConsumePoints(transaction)
 	if err != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
 	}
@@ -126,18 +128,19 @@ func ConsumePoints(c echo.Context) error {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
 	}
 
-	//加入交易监听队列, 如果交易上链,会同步更新数据库
+	//加入交易监听队列, 监听服务监听交易上链,同步更新数据库
 	var para = &eth.PendingPoolParas{
-		ChainType: p.ChainType,
-		UserID:    p.UserID,
-		TxHash:    ethcmn.HexToHash(txhash),
-		From:      *from,
-		To:        *transaction.To(),
-		Nonce:     transaction.Nonce(),
+		ChainType:   p.ChainType,
+		UserID:      p.UserID,
+		TxHash:      ethcmn.HexToHash(txhash),
+		From:        *from,
+		To:          *transaction.To(),
+		Nonce:       transaction.Nonce(),
+		Description: fmt.Sprintf("%v.%v.%v:%v", p.ChainType, "PointCoin.consume", payloadData[0], payloadData[1]),
 	}
 	eth.AppendToPendingPool(para)
 	//等待上链,如果执行成功, 则捕获buy事件,保存到数据库
-	go contracts.PollEventBurn(p.ChainType, txhash, blockNum.ToInt().Uint64(), *transaction.To())
+	go contracts.PollEventBurn(p.ChainType, txhash, blockNum.ToInt().Uint64(), *from)
 
 	return httpservice.JSONReturns(c, txhash)
 }
@@ -162,7 +165,7 @@ func RefundPoints(c echo.Context) error {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
 	}
 	//解析交易执行的输入数据
-	_, err = eth.PraseRefundPoints(transaction)
+	payloadData, err := eth.PraseRefundPoints(transaction)
 	if err != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
 	}
@@ -176,18 +179,39 @@ func RefundPoints(c echo.Context) error {
 
 	//加入交易监听队列, 如果交易上链,会同步更新数据库
 	var para = &eth.PendingPoolParas{
-		ChainType: p.ChainType,
-		UserID:    p.UserID,
-		TxHash:    ethcmn.HexToHash(txhash),
-		From:      *from,
-		To:        *transaction.To(),
-		Nonce:     transaction.Nonce(),
+		ChainType:   p.ChainType,
+		UserID:      p.UserID,
+		TxHash:      ethcmn.HexToHash(txhash),
+		From:        *from,
+		To:          *transaction.To(),
+		Nonce:       transaction.Nonce(),
+		Description: fmt.Sprintf("%v.%v.%v", p.ChainType, "PointCoin.refund", payloadData[0]),
 	}
 	eth.AppendToPendingPool(para)
 	//等待上链,如果执行成功, 则捕获buy事件,保存到数据库
-	go contracts.PollEventBurn(p.ChainType, txhash, blockNum.ToInt().Uint64(), *transaction.To())
+	go contracts.PollEventBurn(p.ChainType, txhash, blockNum.ToInt().Uint64(), *from)
 
 	return httpservice.JSONReturns(c, txhash)
+}
+
+//QueryPointsBalance : 发送离线交易 退还积分
+func QueryPointsBalance(c echo.Context) error {
+	p := httpservice.QueryPointsPayload{}
+	if err := c.Bind(&p); err != nil {
+		return err
+	}
+	if err := c.Echo().Validator.Validate(p); err != nil {
+		return err
+	}
+	//TODO: 用户验证和短信验证码验证
+	// if common.UserAuth(p.UserID) == false {
+	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
+	// }
+	balance, err := contracts.PointCoinBalanceOf(p.ChainType, ethcmn.HexToAddress(p.Address))
+	if err != nil {
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
+	}
+	return httpservice.JSONReturns(c, balance)
 }
 
 //QueryTxnMined : 查询交易状态
