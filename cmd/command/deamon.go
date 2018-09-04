@@ -69,9 +69,16 @@ var daemonCmd = &cobra.Command{
 		}
 
 		//通过abigen生成的代码执行合约函数
-		contracts.PointsBuy("poa", "15422339579", auth, "0x1dcef12e93b0abf2d36f723e8b59cc762775d513", 100000)
+		txn, _ := contracts.PointsBuy("poa", "15422339579", auth, "0x1dcef12e93b0abf2d36f723e8b59cc762775d513", 100000)
+		for {
+			mined, success, minedBlock, comfired, desc, _ := eth.IsMined(txn.Hash().String())
+			if mined == true {
+				common.Logger.Errorf("mined:%v, success:%v, minedBlock:%v, comfired:%v, desc:%v", mined, success, minedBlock, comfired, desc)
+				break
+			}
+		}
 		//通过keysore中的账户(+密码)离线签名执行合约函数
-		contracts.PointsConsume("poa", "sqf", "0x1dcef12e93b0abf2d36f723e8b59cc762775d513", "atmchainadmin", 321)
+		contracts.PointsConsume("poa", "15422339579", "0x1dcef12e93b0abf2d36f723e8b59cc762775d513", "atmchainadmin", 321)
 
 		/****************************/
 

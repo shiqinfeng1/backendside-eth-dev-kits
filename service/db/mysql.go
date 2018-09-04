@@ -22,6 +22,7 @@ func migrate() {
 	idb := MysqlBegin()
 	idb.AutoMigrate(&AccountInfo{})
 	idb.AutoMigrate(&PendingTransactionInfo{})
+	idb.AutoMigrate(&PointsInfo{})
 	idb.MysqlCommit()
 }
 

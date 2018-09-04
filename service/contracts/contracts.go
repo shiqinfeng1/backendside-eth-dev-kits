@@ -351,7 +351,7 @@ func PointsBuy(chainName, userID string, auth *bind.TransactOpts, receiver strin
 		return nil, err
 	}
 	// 记录消费积分的信息
-	balance, err := PointCoinBalanceOf(chainName, auth.From)
+	balance, err := PointCoinBalanceOf(chainName, ethcmn.HexToAddress(receiver))
 	if err != nil {
 		return nil, err
 	}
@@ -470,7 +470,7 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 		UserAddress:    userAddress,
 		TxnType:        "consume",
 		PreBalance:     nb.Uint64(),
-		ExpectBalance:  uint64(nb.Int64() + amount),
+		ExpectBalance:  uint64(nb.Int64() - amount),
 		IncurredAmount: uint64(amount),
 		CurrentStatus:  "apply",
 	}
@@ -490,6 +490,7 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 	eth.AppendToPendingPool(para)
 	//等待交易上链,并捕获Burn事件
 	go PollEventBurn(
+		"consume",
 		chainName,
 		txHash,
 		blockNum.ToInt().Uint64(),
@@ -519,7 +520,7 @@ func addPointsRequireRecord(para *eth.PointsParas) error {
 	defer dbconn.MysqlRollback()
 
 	notfound := dbconn.Model(&db.PointsInfo{}).
-		Where("tx_hash = ?", para.TxHash.String()).
+		Where("txn_hash = ?", para.TxHash.String()).
 		Find(pInfo).
 		RecordNotFound()
 	if notfound {
@@ -555,7 +556,7 @@ func PointsBuyComfiredToDB(txHash string, userAddress string, amount uint64) err
 	defer dbconn.MysqlRollback()
 
 	notfound := dbconn.Model(&db.PointsInfo{}).
-		Where("tx_hash = ?", txHash).
+		Where("txn_hash = ?", txHash).
 		Find(pInfo).
 		RecordNotFound()
 	if !notfound &&
@@ -579,18 +580,26 @@ func PointsBuyComfiredToDB(txHash string, userAddress string, amount uint64) err
 
 //PointsConsumeComfiredToDB 消费积分交易确认
 func PointsConsumeComfiredToDB(txHash string, userAddress string, amount uint64) error {
+	return addPointsComfiredRecord("consume", txHash, userAddress, amount)
+}
+
+//PointsRefundComfiredToDB 消费积分交易确认
+func PointsRefundComfiredToDB(txHash string, userAddress string, amount uint64) error {
+	return addPointsComfiredRecord("refund", txHash, userAddress, amount)
+}
+func addPointsComfiredRecord(txnType, txHash string, userAddress string, amount uint64) error {
 
 	pInfo := &db.PointsInfo{}
 	dbconn := db.MysqlBegin()
 	defer dbconn.MysqlRollback()
 
 	notfound := dbconn.Model(&db.PointsInfo{}).
-		Where("tx_hash = ?", txHash).
+		Where("txn_hash = ?", txHash).
 		Find(pInfo).
 		RecordNotFound()
 	if !notfound &&
 		pInfo.UserAddress == userAddress &&
-		pInfo.TxnType == "buy" &&
+		pInfo.TxnType == txnType &&
 		pInfo.IncurredAmount == amount {
 
 		err := dbconn.Model(pInfo).Update("current_status", "comfired").Error
@@ -599,7 +608,7 @@ func PointsConsumeComfiredToDB(txHash string, userAddress string, amount uint64)
 			return err
 		}
 	} else {
-		err := fmt.Errorf("PointsBuyComfiredToDB. txHash:%s not found", txHash)
+		err := fmt.Errorf("addPointsComfiredRecord.%s txHash:%s not found", txnType, txHash)
 		cmn.Logger.Error(err)
 		return err
 	}

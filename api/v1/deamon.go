@@ -145,12 +145,12 @@ func ConsumePoints(c echo.Context) error {
 		UserAddress:    *from,
 		TxnType:        "consume",
 		PreBalance:     balance.Uint64(),
-		ExpectBalance:  uint64(balance.Int64() + amount),
+		ExpectBalance:  uint64(balance.Int64() - amount),
 		IncurredAmount: uint64(amount),
 		CurrentStatus:  "apply",
 	}
 	if err := contracts.PointsConsumeRequireToDB(ppara); err != nil {
-		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "ConsumePoints.PointsBuyRequireToDB:"+err.Error())
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "ConsumePoints.PointsConsumeRequireToDB:"+err.Error())
 	}
 
 	//加入交易监听队列, 监听服务监听交易上链,同步更新数据库
@@ -166,7 +166,7 @@ func ConsumePoints(c echo.Context) error {
 	eth.AppendToPendingPool(para)
 
 	//等待上链,如果执行成功, 则捕获buy事件保存到数据库
-	go contracts.PollEventBurn(p.ChainType, txhash, blockNum.ToInt().Uint64(), *from)
+	go contracts.PollEventBurn("consume", p.ChainType, txhash, blockNum.ToInt().Uint64(), *from)
 
 	return httpservice.JSONReturns(c, txhash)
 }
@@ -234,7 +234,7 @@ func RefundPoints(c echo.Context) error {
 	}
 	eth.AppendToPendingPool(para)
 	//等待上链,如果执行成功, 则捕获buy事件,保存到数据库
-	go contracts.PollEventBurn(p.ChainType, txhash, blockNum.ToInt().Uint64(), *from)
+	go contracts.PollEventBurn("consume", p.ChainType, txhash, blockNum.ToInt().Uint64(), *from)
 
 	return httpservice.JSONReturns(c, txhash)
 }

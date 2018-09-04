@@ -76,7 +76,7 @@ func catchEventMint(points *ERC20.PointCoin, startBlock uint64, to []common.Addr
 }
 
 //PollEventBurn 等待交易上链,如果执行成功,捕获Burn事件
-func PollEventBurn(chainName, txHash string, startBlock uint64, burner common.Address) {
+func PollEventBurn(txnType, chainName, txHash string, startBlock uint64, burner common.Address) {
 	points, conn, err := AttachPointCoin(chainName)
 	if err != nil {
 		cmn.Logger.Errorf("Failed to AttachPointCoin: %v", err)
@@ -87,12 +87,13 @@ func PollEventBurn(chainName, txHash string, startBlock uint64, burner common.Ad
 	//如果交易失败,则不会有事件触发,无需监听
 	if success == true {
 		catchEventBurn(
+			txnType,
 			points,
 			startBlock,
 			[]common.Address{burner})
 	}
 }
-func catchEventBurn(points *ERC20.PointCoin, startBlock uint64, burner []common.Address) {
+func catchEventBurn(txnType string, points *ERC20.PointCoin, startBlock uint64, burner []common.Address) {
 	//TODO: 记录捕获Transfer事件
 	history, err := points.FilterBurn(&bind.FilterOpts{Start: startBlock}, burner)
 	if err != nil {
@@ -101,6 +102,12 @@ func catchEventBurn(points *ERC20.PointCoin, startBlock uint64, burner []common.
 	}
 	for history.Next() {
 		e := history.Event
+		if txnType == "consume" {
+			PointsConsumeComfiredToDB(e.Raw.TxHash.Hex(), e.Burner.String(), e.Value.Uint64())
+		}
+		if txnType == "refund" {
+			PointsRefundComfiredToDB(e.Raw.TxHash.Hex(), e.Burner.String(), e.Value.Uint64())
+		}
 		cmn.Logger.Noticef("%s Burn Points %v at block %d", e.Burner.String(), e.Value, e.Raw.BlockNumber)
 	}
 }
