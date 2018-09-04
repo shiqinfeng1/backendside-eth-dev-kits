@@ -21,6 +21,7 @@ import (
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
 	cmn "github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/contracts/ERC20"
+	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/db"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/eth"
 )
 
@@ -224,13 +225,13 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 
 	//交易加入pending监听队列
 	var para = &eth.PendingPoolParas{
-		ChainType: chainName,
-		UserID:    userID,
-		TxHash:    txn.Hash(),
-		From:      auth.From,
-		To:        *txn.To(),
-		Nonce:     txn.Nonce(),
-		Description: fmt.Sprintf("%v.%v.%v.%v:%v.%v", chainName, "OMCToken.transfer", userID, auth.From.Hex(),receiver,amount),
+		ChainType:   chainName,
+		UserID:      userID,
+		TxHash:      txn.Hash(),
+		From:        auth.From,
+		To:          *txn.To(),
+		Nonce:       txn.Nonce(),
+		Description: fmt.Sprintf("%v.%v.%v.%v:%v.%v", chainName, "OMCToken.transfer", userID, auth.From.Hex(), receiver, amount),
 	}
 	eth.AppendToPendingPool(para)
 
@@ -282,12 +283,12 @@ func DeployPointCoin(chainName, userID string, auth *bind.TransactOpts) (*ERC20.
 		updatePointAddressToConfig(addr.Hex())
 		//将会交易加入监听池
 		var para = &eth.PendingPoolParas{
-			ChainType: chainName,
-			UserID:    userID,
-			TxHash:    txn.Hash(),
-			From:      auth.From,
-			To:        ethcmn.Address{},
-			Nonce:     txn.Nonce(),
+			ChainType:   chainName,
+			UserID:      userID,
+			TxHash:      txn.Hash(),
+			From:        auth.From,
+			To:          ethcmn.Address{},
+			Nonce:       txn.Nonce(),
 			Description: fmt.Sprintf("%v.%v.%v.%v", chainName, "DeployPointCoin", userID, auth.From.Hex()),
 		}
 		eth.AppendToPendingPool(para)
@@ -349,14 +350,34 @@ func PointsBuy(chainName, userID string, auth *bind.TransactOpts, receiver strin
 		cmn.Logger.Errorf("Failed to Buy points: %v", err)
 		return nil, err
 	}
+	// 记录消费积分的信息
+	balance, err := PointCoinBalanceOf(chainName, auth.From)
+	if err != nil {
+		return nil, err
+	}
+	var ppara = &eth.PointsParas{
+		ChainType:      chainName,
+		UserID:         userID,
+		TxHash:         txn.Hash(),
+		UserAddress:    ethcmn.HexToAddress(receiver),
+		TxnType:        "buy",
+		PreBalance:     balance.Uint64(),
+		ExpectBalance:  balance.Uint64() + amount,
+		IncurredAmount: uint64(amount),
+		CurrentStatus:  "apply",
+	}
+	if err := PointsBuyRequireToDB(ppara); err != nil {
+		return nil, err
+	}
+
 	var para = &eth.PendingPoolParas{
-		ChainType: chainName,
-		UserID:    userID,
-		TxHash:    txn.Hash(),
-		From:      auth.From,
-		To:        *txn.To(),
-		Nonce:     txn.Nonce(),
-		Description: fmt.Sprintf("%v.%v.%v.%v:%v", chainName, "PointCoin.buy", auth.From.Hex(), receiver,amount),
+		ChainType:   chainName,
+		UserID:      userID,
+		TxHash:      txn.Hash(),
+		From:        auth.From,
+		To:          *txn.To(),
+		Nonce:       txn.Nonce(),
+		Description: fmt.Sprintf("%v.%v.%v.%v:%v", chainName, "PointCoin.buy", auth.From.Hex(), receiver, amount),
 	}
 	eth.AppendToPendingPool(para)
 	//等待交易上链,并捕获Transfer事件
@@ -442,6 +463,21 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 		return nil, err
 	}
 
+	var ppara = &eth.PointsParas{
+		ChainType:      chainName,
+		UserID:         consumerID,
+		TxHash:         ethcmn.HexToHash(txHash),
+		UserAddress:    userAddress,
+		TxnType:        "consume",
+		PreBalance:     nb.Uint64(),
+		ExpectBalance:  uint64(nb.Int64() + amount),
+		IncurredAmount: uint64(amount),
+		CurrentStatus:  "apply",
+	}
+	if err := PointsConsumeRequireToDB(ppara); err != nil {
+		return nil, err
+	}
+
 	var para = &eth.PendingPoolParas{
 		ChainType:   chainName,
 		UserID:      consumerID,
@@ -459,4 +495,114 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 		blockNum.ToInt().Uint64(),
 		userAddress)
 	return rawTx, err
+}
+
+//PointsBuyRequireToDB 记录积分购买
+func PointsBuyRequireToDB(para *eth.PointsParas) error {
+	return addPointsRequireRecord(para)
+}
+
+//PointsConsumeRequireToDB 记录积分消费
+func PointsConsumeRequireToDB(para *eth.PointsParas) error {
+	return addPointsRequireRecord(para)
+}
+
+//PointsRefundRequireToDB 记录积分退还
+func PointsRefundRequireToDB(para *eth.PointsParas) error {
+	return addPointsRequireRecord(para)
+}
+
+func addPointsRequireRecord(para *eth.PointsParas) error {
+
+	pInfo := &db.PointsInfo{}
+	dbconn := db.MysqlBegin()
+	defer dbconn.MysqlRollback()
+
+	notfound := dbconn.Model(&db.PointsInfo{}).
+		Where("tx_hash = ?", para.TxHash.String()).
+		Find(pInfo).
+		RecordNotFound()
+	if notfound {
+		pInfo.ChainType = para.ChainType
+		pInfo.UserID = para.UserID
+		pInfo.UserAddress = para.UserAddress.String()
+		pInfo.TxnType = para.TxnType
+		pInfo.TxnHash = para.TxHash.String()
+		pInfo.PreBalance = para.PreBalance
+		pInfo.ExpectBalance = para.ExpectBalance
+		pInfo.IncurredAmount = para.IncurredAmount
+		pInfo.CurrentStatus = para.CurrentStatus
+
+		err := dbconn.Create(pInfo).Error
+		if err != nil {
+			cmn.Logger.Error(err)
+			return err
+		}
+	} else {
+		err := fmt.Errorf("txHash:%s is already added", para.TxHash.String())
+		cmn.Logger.Error(err)
+		return err
+	}
+	dbconn.MysqlCommit()
+	return nil
+}
+
+//PointsBuyComfiredToDB 购买积分交易确认
+func PointsBuyComfiredToDB(txHash string, userAddress string, amount uint64) error {
+
+	pInfo := &db.PointsInfo{}
+	dbconn := db.MysqlBegin()
+	defer dbconn.MysqlRollback()
+
+	notfound := dbconn.Model(&db.PointsInfo{}).
+		Where("tx_hash = ?", txHash).
+		Find(pInfo).
+		RecordNotFound()
+	if !notfound &&
+		pInfo.UserAddress == userAddress &&
+		pInfo.TxnType == "buy" &&
+		pInfo.IncurredAmount == amount {
+
+		err := dbconn.Model(pInfo).Update("current_status", "comfired").Error
+		if err != nil {
+			cmn.Logger.Error(err)
+			return err
+		}
+	} else {
+		err := fmt.Errorf("PointsBuyComfiredToDB. txHash:%s not found", txHash)
+		cmn.Logger.Error(err)
+		return err
+	}
+	dbconn.MysqlCommit()
+	return nil
+}
+
+//PointsConsumeComfiredToDB 消费积分交易确认
+func PointsConsumeComfiredToDB(txHash string, userAddress string, amount uint64) error {
+
+	pInfo := &db.PointsInfo{}
+	dbconn := db.MysqlBegin()
+	defer dbconn.MysqlRollback()
+
+	notfound := dbconn.Model(&db.PointsInfo{}).
+		Where("tx_hash = ?", txHash).
+		Find(pInfo).
+		RecordNotFound()
+	if !notfound &&
+		pInfo.UserAddress == userAddress &&
+		pInfo.TxnType == "buy" &&
+		pInfo.IncurredAmount == amount {
+
+		err := dbconn.Model(pInfo).Update("current_status", "comfired").Error
+		if err != nil {
+			cmn.Logger.Error(err)
+			return err
+		}
+	} else {
+		err := fmt.Errorf("PointsBuyComfiredToDB. txHash:%s not found", txHash)
+		cmn.Logger.Error(err)
+		return err
+	}
+	dbconn.MysqlCommit()
+	return nil
 }

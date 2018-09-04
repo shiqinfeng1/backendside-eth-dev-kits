@@ -37,3 +37,17 @@ type PendingTransactionInfo struct {
 	ListenTimeoutAt time.Time
 	Description     string `gorm:"type:varchar(256)"`
 }
+
+// PointsInfo 积分交易信息
+type PointsInfo struct {
+	Model
+	ChainType      string `gorm:"not null;type:varchar(32)"`
+	UserID         string `gorm:"not null;type:varchar(32);index:idx_ptinfo_userid"`
+	UserAddress    string `gorm:"not null;type:varchar(42)"`
+	TxnType        string `gorm:"not null;type:varchar(32)"` // buy consume refund
+	TxnHash        string `gorm:"not null;unique;type:varchar(66)"`
+	PreBalance     uint64 `gorm:"not null"`
+	ExpectBalance  uint64 `gorm:"not null"`
+	IncurredAmount uint64 `gorm:"not null"` //本次交易发生的金额
+	CurrentStatus  string `gorm:"not null"` //交易执行的状态
+}

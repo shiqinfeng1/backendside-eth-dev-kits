@@ -37,6 +37,19 @@ type PendingPoolParas struct {
 	Description string
 }
 
+//PointsParas 参数
+type PointsParas struct {
+	ChainType      string
+	UserID         string
+	UserAddress    ethcmn.Address
+	TxnType        string
+	TxHash         ethcmn.Hash
+	PreBalance     uint64
+	ExpectBalance  uint64
+	IncurredAmount uint64
+	CurrentStatus  string
+}
+
 //RawData 离线交易参数
 type RawData struct {
 	SignedData string

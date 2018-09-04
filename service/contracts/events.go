@@ -70,6 +70,7 @@ func catchEventMint(points *ERC20.PointCoin, startBlock uint64, to []common.Addr
 	}
 	for history.Next() {
 		e := history.Event
+		PointsBuyComfiredToDB(e.Raw.TxHash.String(), e.To.String(), e.Amount.Uint64())
 		cmn.Logger.Noticef("%s Buy Points %v at block %d", e.To.String(), e.Amount, e.Raw.BlockNumber)
 	}
 }
@@ -129,5 +130,4 @@ func waitMinedSync(txHash string) (mined bool, success bool, timeout bool, mined
 			return
 		}
 	}
-	return
 }

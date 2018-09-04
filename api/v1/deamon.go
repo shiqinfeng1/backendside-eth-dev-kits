@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"strconv"
 
 	ethcmn "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -128,6 +129,30 @@ func ConsumePoints(c echo.Context) error {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
 	}
 
+	// 记录消费积分的信息
+	balance, err := contracts.PointCoinBalanceOf(p.ChainType, *from)
+	if err != nil {
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "ConsumePoints.PointCoinBalanceOf:"+err.Error())
+	}
+	amount, err := strconv.ParseInt(payloadData[1], 10, 64)
+	if err != nil {
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "ConsumePoints.ParseInt:"+err.Error())
+	}
+	var ppara = &eth.PointsParas{
+		ChainType:      p.ChainType,
+		UserID:         p.UserID,
+		TxHash:         ethcmn.HexToHash(txhash),
+		UserAddress:    *from,
+		TxnType:        "consume",
+		PreBalance:     balance.Uint64(),
+		ExpectBalance:  uint64(balance.Int64() + amount),
+		IncurredAmount: uint64(amount),
+		CurrentStatus:  "apply",
+	}
+	if err := contracts.PointsConsumeRequireToDB(ppara); err != nil {
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "ConsumePoints.PointsBuyRequireToDB:"+err.Error())
+	}
+
 	//加入交易监听队列, 监听服务监听交易上链,同步更新数据库
 	var para = &eth.PendingPoolParas{
 		ChainType:   p.ChainType,
@@ -139,7 +164,8 @@ func ConsumePoints(c echo.Context) error {
 		Description: fmt.Sprintf("%v.%v.%v:%v", p.ChainType, "PointCoin.consume", payloadData[0], payloadData[1]),
 	}
 	eth.AppendToPendingPool(para)
-	//等待上链,如果执行成功, 则捕获buy事件,保存到数据库
+
+	//等待上链,如果执行成功, 则捕获buy事件保存到数据库
 	go contracts.PollEventBurn(p.ChainType, txhash, blockNum.ToInt().Uint64(), *from)
 
 	return httpservice.JSONReturns(c, txhash)
@@ -177,6 +203,25 @@ func RefundPoints(c echo.Context) error {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
 	}
 
+	// 记录消费积分的信息
+	balance, err := contracts.PointCoinBalanceOf(p.ChainType, *from)
+	if err != nil {
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "RefundPoints.PointCoinBalanceOf"+err.Error())
+	}
+	var ppara = &eth.PointsParas{
+		ChainType:      p.ChainType,
+		UserID:         p.UserID,
+		TxHash:         ethcmn.HexToHash(txhash),
+		UserAddress:    *from,
+		TxnType:        "refund",
+		PreBalance:     balance.Uint64(),
+		ExpectBalance:  0,
+		IncurredAmount: balance.Uint64(),
+		CurrentStatus:  "apply",
+	}
+	if err := contracts.PointsRefundRequireToDB(ppara); err != nil {
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "RefundPoints.PointsRefundRequireToDB"+err.Error())
+	}
 	//加入交易监听队列, 如果交易上链,会同步更新数据库
 	var para = &eth.PendingPoolParas{
 		ChainType:   p.ChainType,

@@ -50,6 +50,11 @@ func InitMysql() {
 			panic(err)
 		}
 	}
+	if idb.HasTable(&PointsInfo{}) == false {
+		if err := idb.CreateTable(&PointsInfo{}).Error; err != nil {
+			panic(err)
+		}
+	}
 	mysql = idb
 	migrate()
 }
