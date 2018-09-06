@@ -15,7 +15,7 @@ type Model struct {
 // AccountInfo 账户信息
 type AccountInfo struct {
 	Model
-	UserID  string `gorm:"not null;type:varchar(32);index:idx_ainfo_userid"`
+	UserID  string `gorm:"not null;type:varchar(64);index:idx_ainfo_userid"`
 	Path    string `gorm:"type:varchar(256)"`
 	Address string `gorm:"not null;unique;type:varchar(256)"`
 }
@@ -23,7 +23,7 @@ type AccountInfo struct {
 // PendingTransactionInfo 交易信息
 type PendingTransactionInfo struct {
 	Model
-	UserID          string `gorm:"not null;type:varchar(32);index:idx_ptinfo_userid"`
+	UserID          string `gorm:"not null;type:varchar(64);index:idx_ptinfo_userid"`
 	From            string `gorm:"not null;type:varchar(42)"`
 	To              string `gorm:"not null;type:varchar(42)"`
 	TxHash          string `gorm:"not null;unique;type:varchar(66)"`
@@ -42,7 +42,7 @@ type PendingTransactionInfo struct {
 type PointsInfo struct {
 	Model
 	ChainType      string `gorm:"not null;type:varchar(32)"`
-	UserID         string `gorm:"not null;type:varchar(32);index:idx_ptinfo_userid"`
+	UserID         string `gorm:"not null;type:varchar(64);index:idx_pinfo_userid"`
 	UserAddress    string `gorm:"not null;type:varchar(42)"`
 	TxnType        string `gorm:"not null;type:varchar(32)"` // buy consume refund
 	TxnHash        string `gorm:"not null;unique;type:varchar(66)"`

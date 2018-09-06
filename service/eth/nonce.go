@@ -81,7 +81,7 @@ func (n *NonceManage) NonceUpdateFromNode(addr string) error {
 	return nil
 }
 
-//GetNonce 获取nonce
+//GetNonce 获取nonce并自增
 func GetNonce(addr string) (*big.Int, error) {
 	//如果没有保存该地址的nonce, 从节点获取nonce
 	if _, ok := nonceManage.Nonces[addr]; !ok {
@@ -102,4 +102,18 @@ func GetNonce(addr string) (*big.Int, error) {
 	n := nm.NonceAvailableValue
 	nm.NonceAvailableValue.Add(nm.NonceAvailableValue, new(big.Int).SetInt64(1))
 	return n, nil
+}
+
+//CurrentNonce 获取当前nonce
+func CurrentNonce(chainName, addr string) (int64, error) {
+	//如果没有保存该地址的nonce, 从节点获取nonce
+	if _, ok := nonceManage.Nonces[addr]; !ok {
+		n, err := ConnectEthNodeForWeb3(chainName).EthGetNonce(ethcmn.HexToAddress(addr))
+		if err != nil {
+			return -1, err
+		}
+		return n.ToInt().Int64(), nil
+	}
+	nm := nonceManage.Nonces[addr]
+	return nm.NonceAvailableValue.Int64() - 1, nil
 }

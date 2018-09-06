@@ -21,7 +21,7 @@ ethereum:
   adminaccount: 0x1dcef12e93b0abf2d36f723e8b59cc762775d513
   omcaddress: 0x33745820325d0415eDA3d027d4e020454c43108e
   gas: 100000  # 10万
-  price: 50000000000  # 30GWei
+  price: 30000000000  # 30GWei
   txtimeout: 600  #10分钟
   txcomfired: 12  #交易确认块数
   debug: true

@@ -84,13 +84,13 @@ func BuyPoints(c echo.Context) error {
 	if err2 != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "no admin. err:"+err2.Error())
 	}
-	auth, err3 := contracts.GetUserAuth("15422339579")
+	transactor, err3 := contracts.GetUserAuth("15422339579")
 	if err3 != nil {
 		common.Logger.Errorf("Get Admin Auth: %s fail.", adminAddress.Hex())
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err3.Error())
 	}
 
-	txn, err5 := contracts.PointsBuy(p.ChainType, "admin", auth, p.Buyer, amount.ToInt().Uint64())
+	txn, err5 := contracts.PointsBuy(p.ChainType, transactor, p.Buyer, amount.ToInt().Uint64())
 	if err5 != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err5.Error())
 	}

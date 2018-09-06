@@ -25,6 +25,12 @@ import (
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/eth"
 )
 
+//Transactor 交易签名者/发送者信息
+type Transactor struct {
+	UserID string
+	Auth   *bind.TransactOpts
+}
+
 //检查目录是否存在
 func checkFileIsExist(filename string) bool {
 	var exist = true
@@ -121,40 +127,53 @@ func updateOmcAddressToConfig(omcAddress string) {
 }
 
 //GetUserAuth 根据用户名获取auth
-func GetUserAuth(userID string) (*bind.TransactOpts, error) {
+func GetUserAuth(userID string) (*Transactor, error) {
 	auth, err := accounts.GetTransactOptsFromHDWallet(userID)
 	if err != nil {
 		cmn.Logger.Errorf("Failed to getUserAuth: %v", err)
 		return nil, err
 	}
-	return auth, err
+	var transactor = &Transactor{
+		UserID: userID,
+		Auth:   auth,
+	}
+	return transactor, err
 }
 
 //GetUserAuthWithPassword 根据以太地址和密码获取
-func GetUserAuthWithPassword(userAddr, pwd string) (*bind.TransactOpts, error) {
+func GetUserAuthWithPassword(userAddr, pwd string) (*Transactor, error) {
 	auth, err := accounts.GetTransactOptsFromKeystore(userAddr, pwd)
 	if err != nil {
 		cmn.Logger.Errorf("Failed to getUserAuthWithPassword: %v", err)
 		return nil, err
 	}
-	return auth, err
+	var transactor = &Transactor{
+		UserID: "KEYSTORE_ACCOUNT_" + userAddr,
+		Auth:   auth,
+	}
+	return transactor, err
 }
 
 // DeployOMCToken 部署合约
-func DeployOMCToken(chainName, userID string, auth *bind.TransactOpts) (*ERC20.OMC, error) {
+func DeployOMCToken(chainName string, transactor *Transactor) (*ERC20.OMC, error) {
+	var err error
+	if transactor.Auth.Nonce, err = eth.GetNonce(transactor.Auth.From.String()); err != nil {
+		cmn.Logger.Errorf("Get Nonce Fail:%v", err)
+		return nil, err
+	}
 
-	cmn.Logger.Debugf("[DeployOMCToken] chainName:%v userID: %v", chainName, userID)
+	cmn.Logger.Debugf("[DeployOMCToken] chainName:%v userID: %v", chainName, transactor.UserID)
 	//设置gaslimit 和 gasgprice
 	v, _ := math.ParseBig256(cmn.Config().GetString("ethereum.gas"))
 	gas := v.Uint64() * 20
 	g, _ := math.ParseBig256(cmn.Config().GetString("ethereum.price"))
 	price := hexutil.Big(*g)
-	auth.GasPrice = price.ToInt()
-	auth.GasLimit = gas
+	transactor.Auth.GasPrice = price.ToInt()
+	transactor.Auth.GasLimit = gas
 
 	//部署合约
 	client := eth.ConnectEthNodeForContract(chainName)
-	addr, txn, token, err := ERC20.DeployOMC(auth, client)
+	addr, txn, token, err := ERC20.DeployOMC(transactor.Auth, client)
 	//dump部署信息
 	cmn.PrintDeployContactInfo(addr, txn, err)
 	if err == nil {
@@ -163,12 +182,12 @@ func DeployOMCToken(chainName, userID string, auth *bind.TransactOpts) (*ERC20.O
 		//将会交易加入监听池
 		var para = &eth.PendingPoolParas{
 			ChainType:   chainName,
-			UserID:      userID,
+			UserID:      transactor.UserID,
 			TxHash:      txn.Hash(),
-			From:        auth.From,
+			From:        transactor.Auth.From,
 			To:          ethcmn.Address{},
 			Nonce:       txn.Nonce(),
-			Description: fmt.Sprintf("%v.%v.%v.%v", chainName, "DeployOMCToken", userID, auth.From.Hex()),
+			Description: fmt.Sprintf("%v.%v.%v.%v", chainName, "DeployOMCToken", transactor.UserID, transactor.Auth.From.Hex()),
 		}
 		eth.AppendToPendingPool(para)
 		//等待交易上链
@@ -192,9 +211,14 @@ func AttachOMCToken(chainName string) (*ERC20.OMC, *ethclient.Client, error) {
 }
 
 // OMCTokenTransfer 执行transfer
-func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receiver string, amount uint64) (*types.Transaction, error) {
+func OMCTokenTransfer(chainName string, transactor *Transactor, receiver string, amount uint64) (*types.Transaction, error) {
+	var err error
+	if transactor.Auth.Nonce, err = eth.GetNonce(transactor.Auth.From.String()); err != nil {
+		cmn.Logger.Errorf("Get Nonce Fail:%v", err)
+		return nil, err
+	}
 
-	cmn.Logger.Debugf("[OMCTokenTransfer] chainName:%v userID: %v receiver:%v amount:%v", chainName, userID, receiver, amount)
+	cmn.Logger.Debugf("[OMCTokenTransfer] chainName:%v userID: %v receiver:%v amount:%v", chainName, transactor.UserID, receiver, amount)
 	//执行交易之前获取blocknumber,监听事件时从该block开始检查
 	blockNum, err := eth.ConnectEthNodeForWeb3(chainName).EthBlockNumber()
 	if err != nil {
@@ -202,7 +226,7 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 		return nil, err
 	}
 
-	nb, err := OMCTokenBalanceOf(chainName, auth.From)
+	nb, err := OMCTokenBalanceOf(chainName, transactor.Auth.From)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +244,7 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 		return nil, err
 	}
 	defer conn.Close()
-	txn, err := omc.Transfer(auth, ethcmn.HexToAddress(receiver), big.NewInt(0).SetUint64(amount))
+	txn, err := omc.Transfer(transactor.Auth, ethcmn.HexToAddress(receiver), big.NewInt(0).SetUint64(amount))
 	if err != nil {
 		cmn.Logger.Errorf("Failed to Transfer: %v", err)
 		return nil, err
@@ -229,12 +253,12 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 	//交易加入pending监听队列
 	var para = &eth.PendingPoolParas{
 		ChainType:   chainName,
-		UserID:      userID,
+		UserID:      transactor.UserID,
 		TxHash:      txn.Hash(),
-		From:        auth.From,
+		From:        transactor.Auth.From,
 		To:          *txn.To(),
 		Nonce:       txn.Nonce(),
-		Description: fmt.Sprintf("%v.%v.%v.%v:%v.%v", chainName, "OMCToken.transfer", userID, auth.From.Hex(), receiver, amount),
+		Description: fmt.Sprintf("%v.%v.%v.%v:%v.%v", chainName, "OMCToken.transfer", transactor.UserID, transactor.Auth.From.Hex(), receiver, amount),
 	}
 	eth.AppendToPendingPool(para)
 
@@ -243,7 +267,7 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 		chainName,
 		txn.Hash().Hex(),
 		blockNum.ToInt().Uint64(),
-		auth.From, ethcmn.HexToAddress(receiver))
+		transactor.Auth.From, ethcmn.HexToAddress(receiver))
 
 	return txn, err
 }
@@ -265,20 +289,26 @@ func OMCTokenBalanceOf(chainName string, addr ethcmn.Address) (*big.Int, error) 
 }
 
 // DeployPointCoin 部署合约
-func DeployPointCoin(chainName, userID string, auth *bind.TransactOpts) (*ERC20.PointCoin, error) {
+func DeployPointCoin(chainName string, transactor *Transactor) (*ERC20.PointCoin, error) {
+	var err error
+	if transactor.Auth.Nonce, err = eth.GetNonce(transactor.Auth.From.String()); err != nil {
+		cmn.Logger.Errorf("Get Nonce Fail:%v", err)
+		return nil, err
+	}
 
-	cmn.Logger.Debugf("[DeployPointCoin] chainName:%v userID: %v", chainName, userID)
+	cmn.Logger.Debugf("[DeployPointCoin] chainName:%v userID: %v nonce: %v", chainName, transactor.UserID, transactor.Auth.Nonce)
+
 	//设置gaslimit 和 gasgprice
 	v, _ := math.ParseBig256(cmn.Config().GetString("ethereum.gas"))
 	gas := v.Uint64() * 20
 	g, _ := math.ParseBig256(cmn.Config().GetString("ethereum.price"))
 	price := hexutil.Big(*g)
-	auth.GasPrice = price.ToInt()
-	auth.GasLimit = gas
+	transactor.Auth.GasPrice = price.ToInt()
+	transactor.Auth.GasLimit = gas
 
 	//部署合约
 	client := eth.ConnectEthNodeForContract(chainName)
-	addr, txn, points, err := ERC20.DeployPointCoin(auth, client)
+	addr, txn, points, err := ERC20.DeployPointCoin(transactor.Auth, client)
 	//dump部署信息
 	cmn.PrintDeployContactInfo(addr, txn, err)
 	if err == nil {
@@ -287,12 +317,12 @@ func DeployPointCoin(chainName, userID string, auth *bind.TransactOpts) (*ERC20.
 		//将会交易加入监听池
 		var para = &eth.PendingPoolParas{
 			ChainType:   chainName,
-			UserID:      userID,
+			UserID:      transactor.UserID,
 			TxHash:      txn.Hash(),
-			From:        auth.From,
+			From:        transactor.Auth.From,
 			To:          ethcmn.Address{},
 			Nonce:       txn.Nonce(),
-			Description: fmt.Sprintf("%v.%v.%v.%v", chainName, "DeployPointCoin", userID, auth.From.Hex()),
+			Description: fmt.Sprintf("%v.%v.%v.%v", chainName, "DeployPointCoin", transactor.UserID, transactor.Auth.From.Hex()),
 		}
 		eth.AppendToPendingPool(para)
 		//等待交易上链
@@ -332,9 +362,14 @@ func PointCoinBalanceOf(chainName string, addr ethcmn.Address) (*big.Int, error)
 }
 
 // PointsBuy 购买积分
-func PointsBuy(chainName, userID string, auth *bind.TransactOpts, receiver string, amount uint64) (*types.Transaction, error) {
+func PointsBuy(chainName string, transactor *Transactor, receiver string, amount uint64) (*types.Transaction, error) {
+	var err error
+	if transactor.Auth.Nonce, err = eth.GetNonce(transactor.Auth.From.String()); err != nil {
+		cmn.Logger.Errorf("Get Nonce Fail:%v", err)
+		return nil, err
+	}
 
-	cmn.Logger.Debugf("[PointsBuy] chainName:%v userID: %v receiver:%v amount:%v", chainName, userID, receiver, amount)
+	cmn.Logger.Debugf("[PointsBuy] chainName:%v userID: %v receiver:%v amount:%v", chainName, transactor.UserID, receiver, amount)
 	//执行交易之前获取blocknumber,监听事件时从该block开始检查
 	blockNum, err := eth.ConnectEthNodeForWeb3(chainName).EthBlockNumber()
 	if err != nil {
@@ -348,7 +383,7 @@ func PointsBuy(chainName, userID string, auth *bind.TransactOpts, receiver strin
 		return nil, err
 	}
 	defer conn.Close()
-	txn, err := points.Buy(auth, ethcmn.HexToAddress(receiver), big.NewInt(0).SetUint64(amount))
+	txn, err := points.Buy(transactor.Auth, ethcmn.HexToAddress(receiver), big.NewInt(0).SetUint64(amount))
 	if err != nil {
 		cmn.Logger.Errorf("Failed to Buy points: %v", err)
 		return nil, err
@@ -360,7 +395,7 @@ func PointsBuy(chainName, userID string, auth *bind.TransactOpts, receiver strin
 	}
 	var ppara = &eth.PointsParas{
 		ChainType:      chainName,
-		UserID:         userID,
+		UserID:         transactor.UserID,
 		TxHash:         txn.Hash(),
 		UserAddress:    ethcmn.HexToAddress(receiver),
 		TxnType:        "buy",
@@ -375,12 +410,12 @@ func PointsBuy(chainName, userID string, auth *bind.TransactOpts, receiver strin
 
 	var para = &eth.PendingPoolParas{
 		ChainType:   chainName,
-		UserID:      userID,
+		UserID:      transactor.UserID,
 		TxHash:      txn.Hash(),
-		From:        auth.From,
+		From:        transactor.Auth.From,
 		To:          *txn.To(),
 		Nonce:       txn.Nonce(),
-		Description: fmt.Sprintf("%v.%v.%v.%v:%v", chainName, "PointCoin.buy", auth.From.Hex(), receiver, amount),
+		Description: fmt.Sprintf("%v.%v.%v.%v:%v", chainName, "PointCoin.buy", transactor.Auth.From.Hex(), receiver, amount),
 	}
 	eth.AppendToPendingPool(para)
 	//等待交易上链,并捕获Transfer事件
