@@ -423,7 +423,7 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 	//获取指定地址的nonce
 	con := eth.ConnectEthNodeForWeb3(chainName)
 	if con == nil {
-		cmn.Logger.Errorf("Connect Eth Node Fail: %v", err)
+		cmn.Logger.Errorf("Connect Eth Node Fail")
 		return nil, err
 	}
 	nonce, err := con.EthGetNonce(userAddress)
