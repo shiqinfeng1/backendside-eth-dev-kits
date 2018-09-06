@@ -51,7 +51,7 @@ func (n *NonceManage) NonceUpdateFromNode(addr string) error {
 	var nonce = new(big.Int)
 	nonce.SetInt64(-2)
 	if _, ok := n.Nonces[addr]; !ok { //不存在
-		newNonce.NonceAvailableValue.SetInt64(-1)
+		newNonce.NonceAvailableValue = new(big.Int).SetInt64(-1)
 	} else {
 		newNonce.NonceAvailableValue = n.Nonces[addr].NonceAvailableValue
 	}
@@ -64,7 +64,7 @@ func (n *NonceManage) NonceUpdateFromNode(addr string) error {
 	}
 	// Wait until all tx are registered as pending
 	for {
-		if nonce.Cmp(newNonce.NonceAvailableValue) == -1 {
+		if nonce.Cmp(newNonce.NonceAvailableValue) == -1 { // nonce < newNonce.NonceAvailableValue)
 			nn, _ := con.EthGetNonce(ethcmn.HexToAddress(addr)) //获取指定地址的nonce
 			nonce = nn.ToInt()
 		} else {
@@ -88,6 +88,7 @@ func GetNonce(addr string) (*big.Int, error) {
 		if err := nonceManage.NonceUpdateFromNode(addr); err != nil {
 			return new(big.Int).SetInt64(-1), err
 		}
+		return nonceManage.Nonces[addr].NonceAvailableValue, nil
 	}
 	nm := nonceManage.Nonces[addr]
 	nm.NonceLock.Lock()

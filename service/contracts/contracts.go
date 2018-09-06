@@ -202,7 +202,10 @@ func OMCTokenTransfer(chainName, userID string, auth *bind.TransactOpts, receive
 		return nil, err
 	}
 
-	nb, _ := OMCTokenBalanceOf(chainName, auth.From)
+	nb, err := OMCTokenBalanceOf(chainName, auth.From)
+	if err != nil {
+		return nil, err
+	}
 	if amount > nb.Uint64() {
 		cmn.Logger.Errorf("Insufficient balance: has %v. need %v", nb.Uint64(), amount)
 		return nil, errors.New("Insufficient balance")
@@ -255,7 +258,7 @@ func OMCTokenBalanceOf(chainName string, addr ethcmn.Address) (*big.Int, error) 
 	defer conn.Close()
 	balance, err := omc.BalanceOf(&bind.CallOpts{Pending: true}, addr)
 	if err != nil {
-		cmn.Logger.Errorf("Get BalanceOf: %v fail: %v", addr, err)
+		cmn.Logger.Errorf("Get BalanceOf: %v fail: %v", addr.Hex(), err)
 		return nil, err
 	}
 	return balance, err
@@ -322,7 +325,7 @@ func PointCoinBalanceOf(chainName string, addr ethcmn.Address) (*big.Int, error)
 	defer conn.Close()
 	balance, err := points.BalanceOf(&bind.CallOpts{Pending: true}, addr)
 	if err != nil {
-		cmn.Logger.Errorf("Get BalanceOf: %v fail: %v", addr, err)
+		cmn.Logger.Errorf("Get BalanceOf: %v fail: %v", addr.Hex(), err)
 		return nil, err
 	}
 	return balance, err
@@ -395,7 +398,10 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 	cmn.Logger.Debugf("[PointsConsume] chainName:%v consumer:%v amount:%v", chainName, consumer, amount)
 	userAddress := ethcmn.HexToAddress(consumer)
 
-	nb, _ := PointCoinBalanceOf(chainName, userAddress)
+	nb, err := PointCoinBalanceOf(chainName, userAddress)
+	if err != nil {
+		return nil, err
+	}
 	if uint64(amount) > nb.Uint64() {
 		cmn.Logger.Errorf("Insufficient balance: has %v. need %v", nb.Uint64(), amount)
 		return nil, errors.New("Insufficient balance")
