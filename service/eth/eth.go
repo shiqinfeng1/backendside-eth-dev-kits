@@ -176,8 +176,18 @@ func SendRawTxn(p *RawData) (string, *hexutil.Big, error) {
 		cmn.Logger.Errorf("Failed to EthBlockNumber: %v", err)
 		return "", nil, err
 	}
+
+	//如果传入的是16进制数字字符串,需要先转换为字符数组
+	var signed []byte
+	if p.SignedData[:2] == "0x" {
+		if signed, err = hexToBytes(p.SignedData); err != nil {
+			return "", nil, err
+		}
+	} else {
+		signed = []byte(p.SignedData)
+	}
 	// 发送离线交易
-	txHash, err5 := con.EthSendRawTransaction([]byte(p.SignedData))
+	txHash, err5 := con.EthSendRawTransaction(signed)
 	if err5 != nil {
 		cmn.Logger.Error("\ntxHash:", txHash.String(), "\nerror: ", err5, "\n")
 		return "", nil, err5

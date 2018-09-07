@@ -498,6 +498,8 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 	//发送离线交易
 	var rawSigned = &eth.RawData{SignedData: signedData.String(), ChainType: chainName}
 
+	cmn.Logger.Error(signedData.String())
+
 	txHash, blockNum, err := eth.SendRawTxn(rawSigned)
 	if err != nil {
 		cmn.Logger.Errorf("SendRawTxn Fail: %v", err)

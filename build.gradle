@@ -13,7 +13,7 @@ build {
     // 交叉编译的输出选项，注意，要求go 1.5+
     targetPlatform = ['linux-amd64'] //'windows-amd64','linux-386' 'darwin-amd64',
     environment CGO_ENABLED: "1"
-    environment CC: "x86_64-linux-musl-gcc"
+    environment CC: "x86_64-linux-musl-gcc" //linux上需要安装 sudo apt install musl
     go 'build -o ./build/bin/${GOOS}_${GOARCH}_ethsmart${GOEXE} github.com/shiqinfeng1/backendside-eth-dev-kits/cmd'
 }
 task build_mac(type: com.github.blindpirate.gogradle.Go) {
