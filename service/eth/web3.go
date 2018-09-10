@@ -304,24 +304,42 @@ func (c *Client) EthGetStorageAt(addr common.Address, pos, block *hexutil.Big) (
 	return v, nil
 }
 
+//TxpoolGetInspect 实现web3.txpool_inspect
+func (c *Client) TxpoolGetInspect() (*TxpoolInspectResponse, error) {
+	var v TxpoolInspectResponse
+
+	err := c.CallMethod(&v, "txpool_inspect")
+	if err != nil {
+		return nil, err
+	}
+
+	return &v, nil
+}
+
 //EthGetNonce 实现web3.getTransactionCount
 func (c *Client) EthGetNonce(addr common.Address) (*hexutil.Big, error) {
-	return c.EthGetTransactionCount(addr, nil)
+	return c.EthGetTransactionCount(addr, "pending")
 }
 
 //EthGetTransactionCount 实现web3.getTransactionCount
-func (c *Client) EthGetTransactionCount(addr common.Address, block *hexutil.Big) (*hexutil.Big, error) {
+func (c *Client) EthGetTransactionCount(addr common.Address, stage string) (*hexutil.Big, error) {
 	var v hexutil.Big
-	if block == nil {
-		err := c.CallMethod(&v, "eth_getTransactionCount", addr, "pending")
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		err := c.CallMethod(&v, "eth_getTransactionCount", addr, block)
-		if err != nil {
-			return nil, err
-		}
+
+	err := c.CallMethod(&v, "eth_getTransactionCount", addr, stage)
+	if err != nil {
+		return nil, err
+	}
+
+	return &v, nil
+}
+
+//EthGetTransactionCountByBlock 实现web3.getTransactionCount
+func (c *Client) EthGetTransactionCountByBlock(addr common.Address, block *hexutil.Big) (*hexutil.Big, error) {
+	var v hexutil.Big
+
+	err := c.CallMethod(&v, "eth_getTransactionCount", addr, block)
+	if err != nil {
+		return nil, err
 	}
 
 	return &v, nil
@@ -617,6 +635,12 @@ type Transaction struct {
 	GasPrice         *hexutil.Big    `json:"gasPrice"`
 	Gas              *hexutil.Big    `json:"gas"`
 	Input            json.RawMessage `json:"input"`
+}
+
+// TxpoolInspectResponse 交易池中的交易
+type TxpoolInspectResponse struct {
+	Pending map[string]map[string][]string `json:"pending"`
+	Queued  map[string]map[string][]string `json:"queued"`
 }
 
 // Log 事件存储

@@ -462,19 +462,19 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 	price := hexutil.Big(*g)
 
 	//获取指定地址的nonce
-	con := eth.ConnectEthNodeForWeb3(chainName)
-	if con == nil {
-		cmn.Logger.Errorf("Connect Eth Node Fail")
-		return nil, err
-	}
-	nonce, err := con.EthGetNonce(userAddress)
+	// con := eth.ConnectEthNodeForWeb3(chainName)
+	// if con == nil {
+	// 	cmn.Logger.Errorf("Connect Eth Node Fail")
+	// 	return nil, err
+	// }
+	nonce, err := eth.GetNonce(userAddress.Hex())
 	if err != nil {
 		cmn.Logger.Errorf("Get address Nonce Fail: %v", err)
 		return nil, err
 	}
 	//构造交易数据
 	rawTx := types.NewTransaction(
-		nonce.ToInt().Uint64(),
+		nonce.Uint64(),
 		ethcmn.HexToAddress(cmn.Config().GetString(chainName+".pointsaddress")),
 		nil, //value=0
 		gas.ToInt().Uint64(),
@@ -497,8 +497,6 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 
 	//发送离线交易
 	var rawSigned = &eth.RawData{SignedData: signedData.String(), ChainType: chainName}
-
-	cmn.Logger.Error(signedData.String())
 
 	txHash, blockNum, err := eth.SendRawTxn(rawSigned)
 	if err != nil {

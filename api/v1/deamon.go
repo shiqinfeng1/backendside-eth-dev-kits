@@ -25,7 +25,7 @@ func UserTransferETH(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证
-	// if common.UserAuth(p.UserID) == false {
+	// if common.UserAuth(p.UserID,p.VerifyCode) == false {
 	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
 	// }
 
@@ -47,7 +47,7 @@ func SendRawTransaction(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证
-	// if common.UserAuth(p.UserID) == false {
+	// if common.UserAuth(p.UserID,p.VerifyCode) == false {
 	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
 	// }
 
@@ -107,7 +107,7 @@ func ConsumePoints(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证和短信验证码验证
-	// if common.UserAuth(p.UserID) == false {
+	// if common.UserAuth(p.UserID,p.VerifyCode) == false {
 	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
 	// }
 
@@ -181,7 +181,7 @@ func RefundPoints(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证和短信验证码验证
-	// if common.UserAuth(p.UserID) == false {
+	// if common.UserAuth(p.UserID,p.VerifyCode) == false {
 	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
 	// }
 
@@ -249,7 +249,7 @@ func QueryPointsBalance(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证和短信验证码验证
-	// if common.UserAuth(p.UserID) == false {
+	// if common.UserAuth(p.UserID,"") == false {
 	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
 	// }
 	balance, err := contracts.PointCoinBalanceOf(p.ChainType, ethcmn.HexToAddress(p.Address))
@@ -273,4 +273,18 @@ func QueryTxnMined(c echo.Context) error {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
 	}
 	return httpservice.JSONReturns(c, resp)
+}
+
+//SendVerifyCode 发送验证码
+func SendVerifyCode(c echo.Context) error {
+	u := new(common.User)
+	//校验参数
+	if err := c.Bind(u); err != nil {
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
+	}
+
+	if err := common.SendVerifyCode(u.UserID); err != nil {
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
+	}
+	return httpservice.JSONReturns(c, "send ok")
 }

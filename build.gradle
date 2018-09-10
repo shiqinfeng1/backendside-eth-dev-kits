@@ -39,8 +39,35 @@ repositories {
          root 'golang.org/x/text'
          url 'https://github.com/golang/text.git'
     }
+    golang {
+         root 'golang.org/x/tools'
+         url 'https://github.com/golang/tools.git'
+    }
+    golang {
+         root 'golang.org/x/build'
+         url 'https://github.com/golang/build.git'
+    }
+    golang {
+         root 'golang.org/x/oauth2'
+         url 'https://github.com/golang/oauth2.git'
+    }
+    golang {
+         root 'golang.org/x/sync'
+         url 'https://github.com/golang/sync.git'
+    }
+    golang {
+         root 'golang.org/x/time'
+         url 'https://github.com/golang/time.git'
+    }
+    golang {
+         root 'cloud.google.com/go'
+         url 'https://github.com/GoogleCloudPlatform/google-cloud-go.git'
+    }
+    golang {
+         root 'google.golang.org/api'
+         url 'https://github.com/google/google-api-go-client.git'
+    }
 }
-
 
 dependencies {
     golang {
@@ -48,13 +75,13 @@ dependencies {
         build(['name':'github.com/fsnotify/fsnotify'])
         build(['name':'github.com/howeyc/gopass'])
         build(['name':'github.com/jinzhu/gorm'])
-        build(['name':'github.com/kr/pretty'])
         build(['name':'github.com/labstack/echo'])
         build(['name':'github.com/labstack/gommon'])
         build(['name':'github.com/mitchellh/go-homedir'])
         build(['name':'github.com/natefinch/lumberjack'])
         build(['name':'github.com/nicksnyder/go-i18n'])
         build(['name':'github.com/nsqio/go-nsq'])
+        build(['name':'github.com/satori/go.uuid'])
         build(['name':'github.com/shiqinfeng1/go-ethereum-hdwallet'])
         build(['name':'github.com/shiqinfeng1/go-logging'])
         build(['name':'github.com/shiqinfeng1/gorequest'])

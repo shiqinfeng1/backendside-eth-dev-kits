@@ -73,15 +73,11 @@ func TransferEth(p httpservice.TransferPayload) (string, error) {
 		return "", errors.New("no such userID: " + p.UserID + ". err:" + err2.Error())
 	}
 
-	con := ConnectEthNodeForWeb3(p.ChainType)
-	if con == nil {
-		return "", errors.New("no valid endpoint")
-	}
-	nonce, err3 := con.EthGetNonce(userAddress)
+	nonce, err3 := GetNonce(userAddress.Hex())
 	if err3 != nil {
 		return "", errors.New("get nounce fail addr: " + userAddress.Hex() + ". err:" + err3.Error())
 	}
-
+	n := hexutil.Big(*nonce)
 	transaction := &cmn.TransactionRequest{
 		From:     userAddress,
 		To:       ethcmn.HexToAddress(cmn.Config().GetString("ethereum.adminaccount")),
@@ -89,7 +85,7 @@ func TransferEth(p httpservice.TransferPayload) (string, error) {
 		GasPrice: &price,
 		Value:    &amount,
 		Data:     *new(hexutil.Bytes),
-		Nonce:    nonce,
+		Nonce:    &n,
 	}
 	signedTx, err4 := accounts.SignTx(p.UserID, transaction)
 	if err4 != nil {
@@ -97,6 +93,10 @@ func TransferEth(p httpservice.TransferPayload) (string, error) {
 		return "", nil
 	}
 
+	con := ConnectEthNodeForWeb3(p.ChainType)
+	if con == nil {
+		return "", errors.New("no valid endpoint")
+	}
 	txHash, err5 := con.EthSendRawTransaction(signedTx)
 	if err5 != nil {
 		cmn.Logger.Error("\ntxHash:", txHash.String(), "\nerror: ", err5, "\n")

@@ -1,8 +1,11 @@
 package eth
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
+	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -71,14 +74,50 @@ func (n *NonceManage) NonceUpdateFromNode(addr string) error {
 			break
 		}
 		if n.Nonces[addr].NonceLastUpdate.Add(n.NonceUpdateInterval * 5).Before(time.Now()) {
+			cmn.Logger.Error("Get Nonce Fail: timeout")
 			break
 		}
+	}
+	if queuedNonce, err := getMinQueueedNonce(con, addr); err == nil {
+		cmn.Logger.Debugf("Get Pending Nonce:%v Queued Nonce:%v", nonce, queuedNonce)
 	}
 	newNonce.NonceLastUpdate = time.Now()
 	newNonce.NonceAvailableValue = nonce
 	newNonce.NonceLock = new(sync.Mutex)
 	n.Nonces[addr] = newNonce
 	return nil
+}
+
+func getMinQueueedNonce(con *Client, userAddress string) (*[]int, error) {
+	queuedTxns, err := inpsectTxpool(con, userAddress)
+	if err != nil {
+		return nil, err
+	}
+	var keys []int
+	for K := range *queuedTxns {
+		if iK, err := strconv.Atoi(K); err == nil {
+			keys = append(keys, iK)
+		}
+	}
+	sort.Ints(keys)
+
+	return &keys, nil
+
+}
+func inpsectTxpool(con *Client, userAddress string) (*map[string][]string, error) {
+	inspect, err := con.TxpoolGetInspect()
+	if err != nil {
+		return nil, err
+	}
+	var queuedTxn *map[string][]string
+	for addr, txns := range inspect.Queued {
+		if addr == userAddress {
+			queuedTxn = &txns
+			return queuedTxn, nil
+		}
+	}
+	return nil, errors.New("no queued transactions")
+
 }
 
 //GetNonce 获取nonce并自增

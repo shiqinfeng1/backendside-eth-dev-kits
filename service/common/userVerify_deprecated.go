@@ -35,7 +35,7 @@ func init() {
 	}()
 }
 
-//UserVerify :验证用户的有效性
+//UserVerify :验证用户的有效性, 支持本地缓存,超时失效
 func UserVerify(userID, key string) bool {
 
 	//检查本地缓存是否存在该userID
