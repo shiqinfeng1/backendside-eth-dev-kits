@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/labstack/echo"
-	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/contracts"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/eth"
@@ -68,7 +67,7 @@ func BuyPoints(c echo.Context) error {
 		return err
 	}
 	//TODO: 用户验证和短信验证码验证
-	// if common.UserAuth(p.UserID) == false {
+	// if common.UserAuth(p.UserID,p.VerifyCode) == false {
 	// 	return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "token auth failed")
 	// }
 
@@ -79,18 +78,14 @@ func BuyPoints(c echo.Context) error {
 	}
 	amount := hexutil.Big(*a)
 
-	//获取铸币的账户
-	adminAddress, err2 := accounts.GetadminAddress("15422339579")
-	if err2 != nil {
-		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "no admin. err:"+err2.Error())
-	}
-	transactor, err3 := contracts.GetUserAuth("15422339579")
+	//获取交易参数
+	adminTransactor, err3 := contracts.GetTransactOpts("15422339579")
 	if err3 != nil {
-		common.Logger.Errorf("Get Admin Auth: %s fail.", adminAddress.Hex())
+		common.Logger.Errorf("Get Admin Transactor: %s fail.", "15422339579")
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err3.Error())
 	}
-
-	txn, err5 := contracts.PointsBuy(p.ChainType, transactor, p.Buyer, amount.ToInt().Uint64())
+	//通过admin给用户铸币
+	txn, err5 := contracts.PointsBuy(p.ChainType, adminTransactor, p.Buyer, amount.ToInt().Uint64())
 	if err5 != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err5.Error())
 	}
@@ -138,6 +133,8 @@ func ConsumePoints(c echo.Context) error {
 	if err != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, "ConsumePoints.ParseInt:"+err.Error())
 	}
+
+	//记录消费积分记录到数据库
 	var ppara = &eth.PointsParas{
 		ChainType:      p.ChainType,
 		UserID:         p.UserID,
@@ -166,7 +163,13 @@ func ConsumePoints(c echo.Context) error {
 	eth.AppendToPendingPool(para)
 
 	//等待上链,如果执行成功, 则捕获buy事件保存到数据库
-	go contracts.PollEventBurn("consume", p.ChainType, txhash, blockNum.ToInt().Uint64(), *from)
+	go contracts.PollEventBurn(
+		"consume",
+		p.ChainType,
+		txhash,
+		blockNum.ToInt().Uint64(),
+		*from,
+	)
 
 	return httpservice.JSONReturns(c, txhash)
 }
@@ -287,4 +290,15 @@ func SendVerifyCode(c echo.Context) error {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
 	}
 	return httpservice.JSONReturns(c, "send ok")
+}
+
+//QueryPointsRecord 查询积分记录
+func QueryPointsRecord(c echo.Context) error {
+	p := new(httpservice.QueryPointsRecordsPayload)
+	//校验参数
+	if err := c.Bind(p); err != nil {
+		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
+	}
+	recordsList, total := contracts.QueryPointsRecord(p.UserID, p.Page, p.PerPage)
+	return httpservice.JSONReturns(c, recordsList, p.Page, total, p.PerPage)
 }

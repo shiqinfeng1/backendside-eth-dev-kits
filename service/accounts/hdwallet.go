@@ -241,6 +241,7 @@ func GetUserAddress(userID string) (common.Address, error) {
 
 //GetadminAddress 获取管理员账户
 func GetadminAddress(id string) (common.Address, error) {
+	//TODO: 检查是否是管理员
 	accountInfo, err := getAccountInfo(id)
 	if err != nil {
 		cmn.Logger.Error(err)

@@ -35,7 +35,7 @@ poa:
   txcomfired: 3  #交易确认块数
 solidity:
   source:
-    - ERC20/OMC
+    - ERC20/OMC  
     - ERC20/PointCoin
   exclude:
     ERC20,ERC20Basic,SafeERC20,SafeMath,Ownable,BasicToken,BurnableToken,DetailedERC20,StandardToken,StandardBurnableToken,MintableToken

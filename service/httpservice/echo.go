@@ -169,6 +169,7 @@ func InitHTTPService() (e *echo.Echo) {
 		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
 		AllowMethods: []string{echo.GET, echo.HEAD, echo.PUT, echo.PATCH, echo.POST, echo.DELETE},
 	}))
+	e.Use(emw.Secure())
 	return e
 }
 

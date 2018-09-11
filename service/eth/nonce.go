@@ -34,7 +34,7 @@ func NewNonceManage(chainName string, interval uint64) *NonceManage {
 	nonceManage = &NonceManage{
 		Nonces: make(map[string]NonceData),
 	}
-	nonceManage.NonceUpdateInterval = time.Duration(interval)
+	nonceManage.NonceUpdateInterval = time.Duration(interval) * time.Second
 	nonceManage.ChainName = chainName
 	return nonceManage
 }
@@ -55,8 +55,10 @@ func (n *NonceManage) NonceUpdateFromNode(addr string) error {
 	nonce.SetInt64(-2)
 	if _, ok := n.Nonces[addr]; !ok { //不存在
 		newNonce.NonceAvailableValue = new(big.Int).SetInt64(-1)
+		newNonce.NonceLastUpdate = time.Now()
+		newNonce.NonceLock = new(sync.Mutex)
 	} else {
-		newNonce.NonceAvailableValue = n.Nonces[addr].NonceAvailableValue
+		newNonce = n.Nonces[addr]
 	}
 
 	con := ConnectEthNodeForWeb3(n.ChainName)
@@ -73,7 +75,7 @@ func (n *NonceManage) NonceUpdateFromNode(addr string) error {
 		} else {
 			break
 		}
-		if n.Nonces[addr].NonceLastUpdate.Add(n.NonceUpdateInterval * 5).Before(time.Now()) {
+		if newNonce.NonceLastUpdate.Add(n.NonceUpdateInterval * 5).Before(time.Now()) {
 			cmn.Logger.Error("Get Nonce Fail: timeout")
 			break
 		}
@@ -83,7 +85,6 @@ func (n *NonceManage) NonceUpdateFromNode(addr string) error {
 	}
 	newNonce.NonceLastUpdate = time.Now()
 	newNonce.NonceAvailableValue = nonce
-	newNonce.NonceLock = new(sync.Mutex)
 	n.Nonces[addr] = newNonce
 	return nil
 }

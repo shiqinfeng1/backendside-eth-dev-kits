@@ -1,6 +1,8 @@
 package command
 
 import (
+	"fmt"
+
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/api/v1"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/accounts"
 	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
@@ -26,7 +28,14 @@ var daemonCmd = &cobra.Command{
 		if err := contracts.CompileContracts(); err != nil {
 			return err
 		}
-		go endpoints.NewEndPointsManager().Run()
+		ok := make(chan bool)
+		go endpoints.NewEndPointsManager().Run(ok)
+		if result := <-ok; result == false {
+			err := fmt.Errorf("No Availible ETH Nodes")
+			common.Logger.Fatal(err)
+			return err
+		}
+
 		go eth.NewPendingTransactionManager().Run()
 		eth.NewNonceManage("poa", 2)
 		accounts.NewRootHDWallet()
@@ -35,15 +44,15 @@ var daemonCmd = &cobra.Command{
 		accounts.NewAccount("15422339579")
 
 		//通过用户名获取auth,仅限于hd钱包生成的账户
-		// transactor, err := contracts.GetUserAuth("15422339579")
+		// transactor, err := contracts.GetTransactOpts("15422339579")
 		// if err != nil {
-		// 	common.Logger.Error("GetUserAuth: 15422339579 fail.")
+		// 	common.Logger.Error("GetTransactOpts: 15422339579 fail.")
 		// 	return nil
 		// }
 		//通过用户地址获取auth,适用于所有在keystore中的账户
-		transactor, err := contracts.GetUserAuthWithPassword("0xdf0759b89b9a9e83500e11978ef903e740c895ff", "m44600179701454")
+		transactor, err := contracts.GetTransactOptsWithPassword("0xdf0759b89b9a9e83500e11978ef903e740c895ff", "m44600179701454")
 		if err != nil {
-			common.Logger.Error("GetUserAuth: 15422339579 fail.")
+			common.Logger.Error("GetTransactOpts: 15422339579 fail.")
 			return nil
 		}
 

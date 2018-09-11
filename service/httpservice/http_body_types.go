@@ -125,3 +125,9 @@ type QueryTransactionReponse struct {
 	MinedBlock uint64 `json:"mined_block"`
 	Comfired   int    `json:"comfired"`
 }
+
+//QueryPointsRecordsPayload 积分查询
+type QueryPointsRecordsPayload struct {
+	UserAuthPayload
+	PageParams
+}

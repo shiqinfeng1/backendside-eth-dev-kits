@@ -42,6 +42,9 @@ func checkFileIsExist(filename string) bool {
 }
 
 //CompileContracts 编译智能合约
+//编译工具是项目目录下的abigen
+//源文件路径是: ./contracts/... 支持文件夹寻找源文件
+//输出文件保存在: ./service/contracts
 func CompileContracts() error {
 
 	for _, solcFile := range cmn.Config().GetStringSlice("solidity.source") {
@@ -72,6 +75,7 @@ func CompileContracts() error {
 }
 
 //CompileSolidity 编译
+//注意:官方abigen不支持在sol源文件中import "./ ../"这种相对路径的导入方式的, 这个abigen修改了官方源码后支持这种方式
 func CompileSolidity(source, dest, pkgname, exclude string) error {
 	cmd := exec.Command(
 		"./abigen",
@@ -98,20 +102,27 @@ func CompileSolidity(source, dest, pkgname, exclude string) error {
 }
 
 //=========================
+//保存合约地址到配置文件中, 重启后不再需要重新部署合约
+func updateContractAddressToConfig(match, address string) {
 
-func updateAddressToConfig(match, address string) {
-
+	//读取配置文件内容
 	cfg, _ := filepath.Abs("./myConfig.yaml")
 	input, err := ioutil.ReadFile(cfg)
 	if err != nil {
 		cmn.Logger.Errorf(err.Error())
 	}
+
+	//将内容分割成行
 	lines := strings.Split(string(input), "\n")
+
+	//判断行中是否包含关键字,如果包含,则替换为目标字符串
 	for i, line := range lines {
 		if strings.Contains(line, match) {
 			lines[i] = "  " + match + ": " + address
 		}
 	}
+
+	//将新内容重新组装为配置文本,并更新到配置文件
 	output := strings.Join(lines, "\n")
 	err = ioutil.WriteFile("./myConfig.yaml", []byte(output), 0644)
 	if err != nil {
@@ -119,18 +130,22 @@ func updateAddressToConfig(match, address string) {
 	}
 	return
 }
+
+//更新积分合约地址
 func updatePointAddressToConfig(pointAddress string) {
-	updateAddressToConfig("pointsaddress", pointAddress)
-}
-func updateOmcAddressToConfig(omcAddress string) {
-	updateAddressToConfig("omcaddress", omcAddress)
+	updateContractAddressToConfig("pointsaddress", pointAddress)
 }
 
-//GetUserAuth 根据用户名获取auth
-func GetUserAuth(userID string) (*Transactor, error) {
+//更新omc合约地址
+func updateOmcAddressToConfig(omcAddress string) {
+	updateContractAddressToConfig("omcaddress", omcAddress)
+}
+
+//GetTransactOpts 根据用户名从 HDWallet 中获取Transactor
+func GetTransactOpts(userID string) (*Transactor, error) {
 	auth, err := accounts.GetTransactOptsFromHDWallet(userID)
 	if err != nil {
-		cmn.Logger.Errorf("Failed to getUserAuth: %v", err)
+		cmn.Logger.Errorf("Failed to GetTransactOpts: %v", err)
 		return nil, err
 	}
 	var transactor = &Transactor{
@@ -140,11 +155,11 @@ func GetUserAuth(userID string) (*Transactor, error) {
 	return transactor, err
 }
 
-//GetUserAuthWithPassword 根据以太地址和密码获取
-func GetUserAuthWithPassword(userAddr, pwd string) (*Transactor, error) {
+//GetTransactOptsWithPassword 根据以太地址和密码从 Keystore 中获取Transactor
+func GetTransactOptsWithPassword(userAddr, pwd string) (*Transactor, error) {
 	auth, err := accounts.GetTransactOptsFromKeystore(userAddr, pwd)
 	if err != nil {
-		cmn.Logger.Errorf("Failed to getUserAuthWithPassword: %v", err)
+		cmn.Logger.Errorf("Failed to GetTransactOptsWithPassword: %v", err)
 		return nil, err
 	}
 	var transactor = &Transactor{
@@ -190,7 +205,7 @@ func DeployOMCToken(chainName string, transactor *Transactor) (*ERC20.OMC, error
 			Description: fmt.Sprintf("%v.%v.%v.%v", chainName, "DeployOMCToken", transactor.UserID, transactor.Auth.From.Hex()),
 		}
 		eth.AppendToPendingPool(para)
-		//等待交易上链
+		//同步等待交易上链
 		waitMinedSync(txn.Hash().Hex())
 	}
 
@@ -393,6 +408,8 @@ func PointsBuy(chainName string, transactor *Transactor, receiver string, amount
 	if err != nil {
 		return nil, err
 	}
+
+	//记录积分购买操作到数据库
 	var ppara = &eth.PointsParas{
 		ChainType:      chainName,
 		UserID:         transactor.UserID,
@@ -408,6 +425,7 @@ func PointsBuy(chainName string, transactor *Transactor, receiver string, amount
 		return nil, err
 	}
 
+	//将该交易加入等待上链的监听队列
 	var para = &eth.PendingPoolParas{
 		ChainType:   chainName,
 		UserID:      transactor.UserID,
@@ -418,6 +436,7 @@ func PointsBuy(chainName string, transactor *Transactor, receiver string, amount
 		Description: fmt.Sprintf("%v.%v.%v.%v:%v", chainName, "PointCoin.buy", transactor.Auth.From.Hex(), receiver, amount),
 	}
 	eth.AppendToPendingPool(para)
+
 	//等待交易上链,并捕获Transfer事件
 	go PollEventMint(
 		chainName,
@@ -427,12 +446,13 @@ func PointsBuy(chainName string, transactor *Transactor, receiver string, amount
 	return txn, err
 }
 
-// PointsConsume 消费积分,keystore和密码进行离线签名并发送交易
+// PointsConsume 消费积分,通过keystore和密码的方式进行离线签名并发送交易
 func PointsConsume(chainName, consumerID, consumer, passphrase string, amount int64) (*types.Transaction, error) {
 
 	cmn.Logger.Debugf("[PointsConsume] chainName:%v consumer:%v amount:%v", chainName, consumer, amount)
 	userAddress := ethcmn.HexToAddress(consumer)
 
+	//获取当前积分余额, 消费的积分数量必须小于该余额
 	nb, err := PointCoinBalanceOf(chainName, userAddress)
 	if err != nil {
 		return nil, err
@@ -462,11 +482,6 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 	price := hexutil.Big(*g)
 
 	//获取指定地址的nonce
-	// con := eth.ConnectEthNodeForWeb3(chainName)
-	// if con == nil {
-	// 	cmn.Logger.Errorf("Connect Eth Node Fail")
-	// 	return nil, err
-	// }
 	nonce, err := eth.GetNonce(userAddress.Hex())
 	if err != nil {
 		cmn.Logger.Errorf("Get address Nonce Fail: %v", err)
@@ -504,6 +519,7 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 		return nil, err
 	}
 
+	//记录积分消费操作到数据库
 	var ppara = &eth.PointsParas{
 		ChainType:      chainName,
 		UserID:         consumerID,
@@ -519,6 +535,7 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 		return nil, err
 	}
 
+	//将该交易加入等待上链的监听队列
 	var para = &eth.PendingPoolParas{
 		ChainType:   chainName,
 		UserID:      consumerID,
@@ -526,7 +543,7 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 		From:        userAddress,
 		To:          *rawTx.To(),
 		Nonce:       rawTx.Nonce(),
-		Description: fmt.Sprintf("%s.%s.%s:%v", chainName, "PointCoin.comsume", consumer, amount),
+		Description: fmt.Sprintf("%s.%s.%s::%v", chainName, "PointCoin.comsume", consumer, amount),
 	}
 	eth.AppendToPendingPool(para)
 	//等待交易上链,并捕获Burn事件
@@ -554,6 +571,20 @@ func PointsRefundRequireToDB(para *eth.PointsParas) error {
 	return addPointsRequireRecord(para)
 }
 
+//PointsBuyComfiredToDB 购买积分交易确认
+func PointsBuyComfiredToDB(txHash string, userAddress string, amount uint64) error {
+	return addPointsComfiredRecord("buy", txHash, userAddress, amount)
+}
+
+//PointsConsumeComfiredToDB 消费积分交易确认
+func PointsConsumeComfiredToDB(txHash string, userAddress string, amount uint64) error {
+	return addPointsComfiredRecord("consume", txHash, userAddress, amount)
+}
+
+//PointsRefundComfiredToDB 退还积分交易确认
+func PointsRefundComfiredToDB(txHash string, userAddress string, amount uint64) error {
+	return addPointsComfiredRecord("refund", txHash, userAddress, amount)
+}
 func addPointsRequireRecord(para *eth.PointsParas) error {
 
 	pInfo := &db.PointsInfo{}
@@ -589,45 +620,6 @@ func addPointsRequireRecord(para *eth.PointsParas) error {
 	return nil
 }
 
-//PointsBuyComfiredToDB 购买积分交易确认
-func PointsBuyComfiredToDB(txHash string, userAddress string, amount uint64) error {
-
-	pInfo := &db.PointsInfo{}
-	dbconn := db.MysqlBegin()
-	defer dbconn.MysqlRollback()
-
-	notfound := dbconn.Model(&db.PointsInfo{}).
-		Where("txn_hash = ?", txHash).
-		Find(pInfo).
-		RecordNotFound()
-	if !notfound &&
-		pInfo.UserAddress == userAddress &&
-		pInfo.TxnType == "buy" &&
-		pInfo.IncurredAmount == amount {
-
-		err := dbconn.Model(pInfo).Update("current_status", "comfired").Error
-		if err != nil {
-			cmn.Logger.Error(err)
-			return err
-		}
-	} else {
-		err := fmt.Errorf("PointsBuyComfiredToDB. txHash:%s not found", txHash)
-		cmn.Logger.Error(err)
-		return err
-	}
-	dbconn.MysqlCommit()
-	return nil
-}
-
-//PointsConsumeComfiredToDB 消费积分交易确认
-func PointsConsumeComfiredToDB(txHash string, userAddress string, amount uint64) error {
-	return addPointsComfiredRecord("consume", txHash, userAddress, amount)
-}
-
-//PointsRefundComfiredToDB 消费积分交易确认
-func PointsRefundComfiredToDB(txHash string, userAddress string, amount uint64) error {
-	return addPointsComfiredRecord("refund", txHash, userAddress, amount)
-}
 func addPointsComfiredRecord(txnType, txHash string, userAddress string, amount uint64) error {
 
 	pInfo := &db.PointsInfo{}
@@ -641,18 +633,41 @@ func addPointsComfiredRecord(txnType, txHash string, userAddress string, amount 
 	if !notfound &&
 		pInfo.UserAddress == userAddress &&
 		pInfo.TxnType == txnType &&
-		pInfo.IncurredAmount == amount {
+		pInfo.IncurredAmount == amount { //匹配到交易记录并更新状态
 
 		err := dbconn.Model(pInfo).Update("current_status", "comfired").Error
 		if err != nil {
 			cmn.Logger.Error(err)
 			return err
 		}
-	} else {
-		err := fmt.Errorf("addPointsComfiredRecord.%s txHash:%s not found", txnType, txHash)
+	} else { //未匹配到交易记录
+		err := fmt.Errorf("addPointsComfiredRecord:%s txHash:%s not found", txnType, txHash)
 		cmn.Logger.Error(err)
 		return err
 	}
 	dbconn.MysqlCommit()
 	return nil
+}
+
+//QueryPointsRecord 查询指定用户的积分操作记录
+func QueryPointsRecord(userAddress string, currentPage, perPage int) ([]*db.PointsInfo, int) {
+
+	total := 0
+	records := make([]*db.PointsInfo, 0)
+
+	if currentPage > 0 && perPage > 0 {
+		fromIdx := (currentPage - 1) * perPage
+		dbconn := db.MysqlBegin()
+		defer dbconn.MysqlRollback()
+
+		//userAddress = strings.ToLower(userAddress)
+		allTxs := dbconn.Model(&db.PointsInfo{}).
+			Where("user_address = ?", userAddress)
+		allTxs.Count(&total)
+		allTxs.Order("id DESC").
+			Offset(fromIdx).Limit(perPage).
+			Find(&records)
+	}
+	return records, total
+
 }

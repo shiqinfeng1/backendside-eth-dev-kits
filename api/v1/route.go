@@ -15,5 +15,6 @@ func RegisterDevKitsAPI(e *echo.Echo) {
 	apiv1.POST("/query_points", QueryPointsBalance)
 	apiv1.POST("/query_txn_mined", QueryTxnMined)
 	apiv1.POST("/send_verify_code", SendVerifyCode)
+	apiv1.POST("/query_points_record", QueryPointsRecord)
 	apiv1.Static("/images", "images")
 }

@@ -118,12 +118,14 @@ func waitMinedSync(txHash string) (mined bool, success bool, timeout bool, mined
 		err   error
 	)
 	timeout = false
+
 	defer func() {
 		cmn.Logger.Noticef("[waitMinedSync]Pending Desc:%v Txn: %v Status: Mined:%v Success:%v Timeout:%v minedBlock:%v comfired:%v",
 			desc, txHash, mined, success, timeout, minedBlock, comfired)
 	}()
+
 	for {
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Second * 2) //间隔2秒检查一次
 		if mined, success, minedBlock, comfired, desc, err = eth.IsMined(txHash); err != nil {
 			cmn.Logger.Errorf("[waitMinedSync]transaction %v is mined fail: %v", txHash, err)
 			return

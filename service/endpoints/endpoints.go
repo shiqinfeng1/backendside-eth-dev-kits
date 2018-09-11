@@ -102,11 +102,13 @@ func (e *EndpointsManager) updateEndPoint() {
 }
 
 // Run endpoints run, monitor alive Endpoint
-func (e *EndpointsManager) Run() {
+func (e *EndpointsManager) Run(ok chan bool) {
 	ticker := time.NewTicker(time.Second * 5)
 	defer ticker.Stop()
 
 	e.updateEndPoint()
+	e.watchAliveEndpoint()
+	ok <- (len(e.AliveEndpoints) != 0)
 	for {
 		select {
 		case <-ticker.C:
