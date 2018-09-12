@@ -163,7 +163,7 @@ func GetTransactOptsWithPassword(userAddr, pwd string) (*Transactor, error) {
 		return nil, err
 	}
 	var transactor = &Transactor{
-		UserID: "KEYSTORE_ACCOUNT_" + userAddr,
+		UserID: accounts.GenerateUserIDForKeystore(userAddr),
 		Auth:   auth,
 	}
 	return transactor, err
@@ -447,7 +447,7 @@ func PointsBuy(chainName string, transactor *Transactor, receiver string, amount
 }
 
 // PointsConsume 消费积分,通过keystore和密码的方式进行离线签名并发送交易
-func PointsConsume(chainName, consumerID, consumer, passphrase string, amount int64) (*types.Transaction, error) {
+func PointsConsume(chainName, consumer, passphrase string, amount int64) (*types.Transaction, error) {
 
 	cmn.Logger.Debugf("[PointsConsume] chainName:%v consumer:%v amount:%v", chainName, consumer, amount)
 	userAddress := ethcmn.HexToAddress(consumer)
@@ -522,7 +522,7 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 	//记录积分消费操作到数据库
 	var ppara = &eth.PointsParas{
 		ChainType:      chainName,
-		UserID:         consumerID,
+		UserID:         accounts.GenerateUserIDForKeystore(consumer),
 		TxHash:         ethcmn.HexToHash(txHash),
 		UserAddress:    userAddress,
 		TxnType:        "consume",
@@ -538,7 +538,7 @@ func PointsConsume(chainName, consumerID, consumer, passphrase string, amount in
 	//将该交易加入等待上链的监听队列
 	var para = &eth.PendingPoolParas{
 		ChainType:   chainName,
-		UserID:      consumerID,
+		UserID:      accounts.GenerateUserIDForKeystore(consumer),
 		TxHash:      ethcmn.HexToHash(txHash),
 		From:        userAddress,
 		To:          *rawTx.To(),

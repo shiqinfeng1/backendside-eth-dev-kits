@@ -299,6 +299,6 @@ func QueryPointsRecord(c echo.Context) error {
 	if err := c.Bind(p); err != nil {
 		return httpservice.ErrorReturns(c, httpservice.ErrorCode1, err.Error())
 	}
-	recordsList, total := contracts.QueryPointsRecord(p.UserID, p.Page, p.PerPage)
+	recordsList, total := contracts.QueryPointsRecord(p.Address, p.Page, p.PerPage)
 	return httpservice.JSONReturns(c, recordsList, p.Page, total, p.PerPage)
 }

@@ -1,24 +1,16 @@
 package accounts
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
-	ethacc "github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/howeyc/gopass"
 	cmn "github.com/shiqinfeng1/backendside-eth-dev-kits/service/common"
-	"github.com/shiqinfeng1/backendside-eth-dev-kits/service/db"
 	hdwallet "github.com/shiqinfeng1/go-ethereum-hdwallet"
 )
 
@@ -68,7 +60,7 @@ func NewRootHDWallet() error {
 	return nil
 }
 
-//GetRootHDWallet 获取hd根钱包
+//getRootHDWallet 获取hd根钱包
 func getRootHDWallet() *hdwallet.Wallet {
 
 	fmt.Printf("Input HDWallet Password: ")
@@ -98,8 +90,8 @@ func useridToIndex(userID string) string {
 	return s
 }
 
-// NewAccount 创建新账户
-func NewAccount(userID string) error {
+// NewHDAccount 创建新账户
+func NewHDAccount(userID string) error {
 	if wallet == nil {
 		return errors.New("no wallet")
 	}
@@ -124,152 +116,4 @@ func NewAccount(userID string) error {
 	cmn.Logger.Debug("CREATE NEW ACCOUNT address:", account.Address.Hex())
 	cmn.Logger.Debug("CREATE NEW ACCOUNT path:", newAcc.URL.Path)
 	return nil
-}
-
-func readKeystore(userAddress string) []byte {
-	if userAddress[:2] == "0x" || userAddress[:2] == "0X" {
-		userAddress = userAddress[2:]
-	}
-	files, _ := ioutil.ReadDir("./keystore")
-	for _, f := range files {
-		if bytes.Contains([]byte(f.Name()), []byte(strings.ToLower(userAddress))) {
-			p, _ := filepath.Abs("./keystore/" + f.Name())
-			keys, _ := ioutil.ReadFile(p)
-			return keys
-		}
-	}
-	return []byte{}
-}
-
-// GetTransactOptsFromHDWallet 交易调用参数
-func GetTransactOptsFromHDWallet(userID string) (*bind.TransactOpts, error) {
-	index := useridToIndex(userID)
-	accInfo, err := getAccountInfo(userID)
-	if err != nil {
-		return nil, err
-	}
-	cmn.Logger.Errorf("userID: %v index: %v", userID, index)
-	//首先导入上面生成的账户密钥（json）和密码
-	keys, _ := ioutil.ReadFile(accInfo.Path)
-	transactOpts, err := bind.NewTransactor(strings.NewReader(string(keys)), "m44600"+index)
-	return transactOpts, err
-}
-
-// GetTransactOptsFromKeystore is the collection of authorization data required to create a valid Ethereum transaction.
-func GetTransactOptsFromKeystore(userAddress string, _passphrase string) (*bind.TransactOpts, error) {
-	keys := readKeystore(userAddress)
-	key, err := keystore.DecryptKey(keys, _passphrase)
-	if err != nil {
-		cmn.Logger.Errorf("Failed to decrypt key: %v", err)
-		return nil, err
-	}
-	// 对keystore采取对称加密解析出私钥
-	return bind.NewKeyedTransactor(key.PrivateKey), nil
-}
-
-func getAccountFromHDWallet(index string) (*ethacc.Account, error) {
-	if wallet == nil {
-		return nil, errors.New("no wallet")
-	}
-	path := hdwallet.MustParseDerivationPath("m/44'/60'/0'/0/" + index)
-	account, err := wallet.Derive(path, true)
-	if err != nil {
-		return nil, err
-	}
-	return &account, nil
-}
-
-//GetAccountFromKeystore 从keystore中解析得到账户
-func GetAccountFromKeystore(userAddress string, _passphrase string) (*keystore.Key, error) {
-	keys := readKeystore(userAddress)
-	key, err := keystore.DecryptKey(keys, _passphrase)
-	if err != nil {
-		cmn.Logger.Errorf("Failed to decrypt key: %v", err)
-		return nil, err
-	}
-	return key, nil
-}
-
-func createAccountInfoToDB(userID, path, address string) error {
-
-	accountinfo := &db.AccountInfo{}
-	dbconn := db.MysqlBegin()
-	defer dbconn.MysqlRollback()
-
-	notFound := dbconn.Model(&db.AccountInfo{}).Where("address = ? and user_id = ?", address, userID).Find(accountinfo).RecordNotFound()
-	if notFound {
-		accountinfo.UserID = userID
-		accountinfo.Path = path
-		accountinfo.Address = address
-		err := dbconn.Create(accountinfo).Error
-		if err != nil {
-			cmn.Logger.Error(err)
-			return err
-		}
-	} else {
-		err := dbconn.Model(accountinfo).Update("path", path).Error
-		if err != nil {
-			cmn.Logger.Error(err)
-			return err
-		}
-	}
-	dbconn.MysqlCommit()
-	return nil
-}
-
-func getAccountInfo(userID string) (*db.AccountInfo, error) {
-	accountInfo := &db.AccountInfo{}
-	dbconn := db.MysqlBegin()
-	err := dbconn.Model(&db.AccountInfo{}).Where("user_id = ?", userID).Find(&accountInfo).Error
-	dbconn.MysqlRollback()
-	if err != nil {
-		return nil, err
-	}
-	return accountInfo, nil
-}
-
-//GetUserAddress 获取用户数据
-func GetUserAddress(userID string) (common.Address, error) {
-	accountInfo, err := getAccountInfo(userID)
-	if err != nil {
-		cmn.Logger.Error(err)
-		return common.Address{}, err
-	}
-
-	return common.HexToAddress(accountInfo.Address), nil
-}
-
-//GetadminAddress 获取管理员账户
-func GetadminAddress(id string) (common.Address, error) {
-	//TODO: 检查是否是管理员
-	accountInfo, err := getAccountInfo(id)
-	if err != nil {
-		cmn.Logger.Error(err)
-		return common.Address{}, err
-	}
-
-	return common.HexToAddress(accountInfo.Address), nil
-}
-
-//SignTx 交易签名
-func SignTx(userID string, tx *cmn.TransactionRequest) ([]byte, error) {
-	index := useridToIndex(userID)
-	account, err := getAccountFromHDWallet(index)
-	if err != nil {
-		return nil, err
-	}
-	rawTx := types.NewTransaction(
-		tx.Nonce.ToInt().Uint64(),
-		tx.To,
-		tx.Value.ToInt(),
-		tx.Gas.ToInt().Uint64(),
-		tx.GasPrice.ToInt(),
-		tx.Data)
-
-	//pretty.Print("account:", account, "rawTx:", rawTx)
-	signedTx, err := wallet.SignTx(*account, rawTx, nil)
-	var signedData bytes.Buffer
-	signedTx.EncodeRLP(&signedData)
-	//pretty.Print("signedData:", signedData.String())
-	return signedData.Bytes(), nil
 }

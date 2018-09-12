@@ -129,5 +129,6 @@ type QueryTransactionReponse struct {
 //QueryPointsRecordsPayload 积分查询
 type QueryPointsRecordsPayload struct {
 	UserAuthPayload
+	Address string `json:"address" validate:"required"`
 	PageParams
 }

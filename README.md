@@ -32,7 +32,7 @@ nothing descripton
       ）
       accounts.NewRootHDWallet()
       
-      NewAccount("userID")
+      NewHDAccount("userID")
 ```
 ## 智能合约接口调用
 ## 以太坊web3接口调用
